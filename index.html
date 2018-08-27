@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Demo WebGL2</title>
+</head>
+<body>
+
+<canvas id="scene">It should be a very cool 3D animation here, but your dinausor does not support canvas tag. <br/>
+    It's time to come back to the present days... :(
+</canvas>
+
+<div id="noContextLayer" style="display: none">
+    <h2>Ouch, your dinosaur does not support WebGL2 yet. </h2>
+    <h3>It's time to come back to the present days...</h3>
+</div>
+
+<script language="JavaScript">
+
+    let canvas = document.getElementById("scene");
+
+    let gl = canvas.getContext("webgl2");
+    if (!gl) {
+        canvas.style.display = "none";
+        document.getElementById("noContextLayer").style.display = "block";
+    }
+
+
+</script>
+
+
+</body>
+</html>

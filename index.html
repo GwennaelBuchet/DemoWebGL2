@@ -6,7 +6,7 @@
 </head>
 <body>
 
-<canvas id="scene">
+<canvas id="scene" width="800px" height="600px" style="background: black">
     It should be a very cool 3D animation here, but your dinosaur does not support canvas tag. <br/>
     It's time to come back to the present days... :(
 </canvas>
@@ -15,6 +15,28 @@
     <h2>Ouch, your dinosaur does not support WebGL2 yet. </h2>
     <h3>It's time to come back to the present days...</h3>
 </div>
+
+<script id="vertex-shader" type="x-shader/x-vertex">#version 300 es
+
+// an attribute is an input (in) to a vertex shader.
+in vec4 a_position;
+
+void main() {
+	gl_Position = a_position;
+}
+</script>
+
+<script id="fragment-shader" type="x-shader/x-fragment">#version 300 es
+
+precision mediump float;
+
+// output for the fragment shader
+out vec4 outColor;
+
+void main() {
+  outColor = vec4(0.699, 0.089, 0.2, 1);
+}
+</script>
 
 <script language="JavaScript">
 
@@ -26,17 +48,99 @@
 		document.getElementById("noContextLayer").style.display = "block";
 	}
 
-	let vertexShaderSource = document.getElementById("vertex-shader").text;
-	let fragmentShaderSource = document.getElementById("fragment-shader").text;
+	// let's initialize the shaders and the linked program
+	let program = initShaders();
+    // set the geometry definition
+    let vao = initVAO(gl);
 
-	let vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
-	let fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
-	let program = createProgram(gl, vertexShader, fragmentShader);
+    // let's render. Just once because it's not animated yet
+	render(gl, program, vao);
+
+	/**
+	 * @param gl {WebGLRenderingContext}
+	 * @param program {WebGLProgram}
+	 * @param vao {WebGLShader}
+	 * */
+	function render(gl, program, vao) {
+
+		// Tell WebGL how to convert from clip space to pixels
+		gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+
+		// Clear the color buffer
+		gl.clearColor(0, 0, 0, 0);
+		gl.clear(gl.COLOR_BUFFER_BIT);
+
+		// use our rendering program
+		gl.useProgram(program);
+
+		// Bind the attribute/buffer
+		gl.bindVertexArray(vao);
+
+
+		// draw
+		let primitiveType = gl.TRIANGLES;
+		gl.drawArrays(primitiveType, 0, 3);
+	}
+
+
+	/**
+	 * Initialize Vertex and Fragment shaders + "linked" program
+	 * @returns {WebGLProgram}
+	 * */
+	function initShaders() {
+		let vertexShaderSource = document.getElementById("vertex-shader").text;
+		let fragmentShaderSource = document.getElementById("fragment-shader").text;
+
+		let vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
+		let fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
+
+		return createProgram(gl, vertexShader, fragmentShader);
+	}
+
+
+	/**
+	 * Init Vertex Array
+	 * @param gl {WebGLRenderingContext}
+	 */
+	function initVAO(gl) {
+
+		let positionAttributeLocation = gl.getAttribLocation(program, "a_position");
+		// create a buffer for vertices position
+		let positionBuffer = gl.createBuffer();
+		// Bind it to ARRAY_BUFFER
+		gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+
+		let positions = [
+			-0.5, -0.5, -1,
+			0, 0.5, 0,
+			0.5, -0.5, 1
+		];
+		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+
+		// Create a vertex array object (attribute state)
+		let vao = gl.createVertexArray();
+
+		// and make it the one we're currently working with
+		gl.bindVertexArray(vao);
+
+		// Turn on the attribute
+		gl.enableVertexAttribArray(positionAttributeLocation);
+
+		// Tell the attribute how to get data out of positionBuffer (ARRAY_BUFFER)
+		let size = 3;          // 3 components per iteration
+		let type = gl.FLOAT;   // the data is 32bit floats
+		let normalize = false; // don't normalize the data
+		let stride = 0;        // 0 = move forward size * sizeof(type) each iteration to get the next position
+		let offset = 0;        // start at the beginning of the buffer
+		gl.vertexAttribPointer(positionAttributeLocation, size, type, normalize, stride, offset);
+
+		return vao;
+	}
 
 
 	/**
 	 * Load a "shader" script into a shader object (WebGLShader)
-	 * @param gl {WebGL2RenderingContext}
+	 * @param gl {WebGLRenderingContext}
 	 * @param type {number} gl.VERTEX_SHADER or gl.FRAGMENT_SHADER
 	 * @param source {String} source code for the shader
 	 * @returns {WebGLShader}
@@ -57,7 +161,7 @@
 
 	/**
 	 * Link both Vertex and Fragment shaders into a "Program" (WebGLProgram)
-	 * @param gl {WebGL2RenderingContext}
+	 * @param gl {WebGLRenderingContext}
 	 * @param vertexShader {WebGLShader}
 	 * @param fragmentShader {WebGLShader}
 	 * @returns {WebGLProgram}
@@ -80,31 +184,6 @@
 
 </script>
 
-
-<script id="vertex-shader" type="not-javascript">
-#version 300 es
-
-// an attribute is an input (in) to a vertex shader.
-in vec4 a_position;
-
-void main() {
-
-  gl_Position = a_position;
-}
-</script>
-
-<script id="fragment-shader" type="not-javascript">
-#version 300 es
-
-precision mediump float;
-
-// output for the fragment shader
-out vec4 outColor;
-
-void main() {
-  outColor = vec4(0.699, 0.089, 0.2, 1);
-}
-</script>
 
 </body>
 </html>

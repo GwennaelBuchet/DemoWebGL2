@@ -111,9 +111,9 @@ void main() {
 		gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
 
 		let positions = [
-			-0.5, -0.5, -1,
-			0, 0.5, 0,
-			0.5, -0.5, 1
+			-0.5, -0.5,
+			0, 0.5,
+			0.5, -0.5
 		];
 		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
 
@@ -127,7 +127,7 @@ void main() {
 		gl.enableVertexAttribArray(positionAttributeLocation);
 
 		// Tell the attribute how to get data out of positionBuffer (ARRAY_BUFFER)
-		let size = 3;          // 3 components per iteration
+		let size = 2;          // 2 components per iteration
 		let type = gl.FLOAT;   // the data is 32bit floats
 		let normalize = false; // don't normalize the data
 		let stride = 0;        // 0 = move forward size * sizeof(type) each iteration to get the next position

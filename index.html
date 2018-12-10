@@ -68,7 +68,7 @@ void main() {
 
 		// Clear the color buffer
 		gl.clearColor(0, 0, 0, 0);
-		gl.clear(gl.COLOR_BUFFER_BIT);
+		gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
 		// use our rendering program
 		gl.useProgram(program);
@@ -110,10 +110,47 @@ void main() {
 		// Bind it to ARRAY_BUFFER
 		gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
 
-		let positions = [
+		/*let positions = [
 			-0.5, -0.5,
 			0, 0.5,
 			0.5, -0.5
+		];*/
+		const positions = [
+			// Face avant
+			-1.0, -1.0,  1.0,
+			1.0, -1.0,  1.0,
+			1.0,  1.0,  1.0,
+			-1.0,  1.0,  1.0,
+
+			// Face arrière
+			-1.0, -1.0, -1.0,
+			-1.0,  1.0, -1.0,
+			1.0,  1.0, -1.0,
+			1.0, -1.0, -1.0,
+
+			// Face supérieure
+			-1.0,  1.0, -1.0,
+			-1.0,  1.0,  1.0,
+			1.0,  1.0,  1.0,
+			1.0,  1.0, -1.0,
+
+			// Face inférieure
+			-1.0, -1.0, -1.0,
+			1.0, -1.0, -1.0,
+			1.0, -1.0,  1.0,
+			-1.0, -1.0,  1.0,
+
+			// Face droite
+			1.0, -1.0, -1.0,
+			1.0,  1.0, -1.0,
+			1.0,  1.0,  1.0,
+			1.0, -1.0,  1.0,
+
+			// Face gauche
+			-1.0, -1.0, -1.0,
+			-1.0, -1.0,  1.0,
+			-1.0,  1.0,  1.0,
+			-1.0,  1.0, -1.0
 		];
 		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
 
@@ -184,6 +221,8 @@ void main() {
 
 </script>
 
+<script src="https://webgl2fundamentals.org/webgl/resources/m3.js"></script>
+<script src="https://webgl2fundamentals.org/webgl/resources/m4.js"></script>
 
 </body>
 </html>

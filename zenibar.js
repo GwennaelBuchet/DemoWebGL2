@@ -178,7 +178,7 @@ function drawScene(gl, shaderProgramParams, buffers) {
 	                 zFar);
 
 	drawCube(gl, projectionMatrix, shaderProgramParams, buffers, [-3, 0.0, -15.0], [0, -1 * time, 0]);
-	drawCube(gl, projectionMatrix, shaderProgramParams, buffers, [3, 0.0, -15.0], [0, 1 * time, 0.5*time]);
+	drawCube(gl, projectionMatrix, shaderProgramParams, buffers, [3, 0.0, -15.0], [0, 1 * time, 0.5 * time]);
 
 	time += 0.01;
 }
@@ -193,16 +193,16 @@ function drawCube(gl, projectionMatrix, shaderProgramParams, buffers, translatio
 	//let's rotate the global view
 	mat4.rotate(modelViewMatrix,    // destination matrix
 	            modelViewMatrix,    // matrix to rotate
-	            rotation[0],                // amount to rotate in radians
-	            [1, 0, 0]);         // axis to rotate around
+	            rotation[0],        // amount to rotate in radians
+	            [1, 0, 0]);         // axis to rotate around (X)
 	mat4.rotate(modelViewMatrix,    // destination matrix
 	            modelViewMatrix,    // matrix to rotate
-	            rotation[1],                // amount to rotate in radians
-	            [0, 1, 0]);         // axis to rotate around
+	            rotation[1],        // amount to rotate in radians
+	            [0, 1, 0]);         // axis to rotate around (Y)
 	mat4.rotate(modelViewMatrix,    // destination matrix
 	            modelViewMatrix,    // matrix to rotate
-	            rotation[2],                // amount to rotate in radians
-	            [0, 0, 1]);         // axis to rotate around
+	            rotation[2],        // amount to rotate in radians
+	            [0, 0, 1]);         // axis to rotate around (Z)
 
 	// Set the vertexPosition attribute of the shader
 	gl.bindBuffer(gl.ARRAY_BUFFER, buffers.position);

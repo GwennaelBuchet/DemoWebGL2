@@ -17,5 +17,6 @@ Most basics Vertex and Fragment shaders + simple 2D triangle
 ## Demo 3 : 3D Cube rendering
 Let's go to 3D world and display a simple 3D cube
 
-
+## Demo 4 : Multiple display and animation
+Split the DrawScene function to display several time the same cube, with distinct animations
  

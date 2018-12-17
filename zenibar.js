@@ -145,6 +145,8 @@ function initCubeBuffers(gl) {
 	};
 }
 
+let time = 0.0;
+
 /**
  * Render the scene
  * @param gl {WebGLRenderingContext}
@@ -175,9 +177,10 @@ function drawScene(gl, shaderProgramParams, buffers) {
 	                 zNear,
 	                 zFar);
 
-	drawCube(gl, projectionMatrix, shaderProgramParams, buffers, [-3, 0.0, -15.0], [1, -1, 0]);
-	drawCube(gl, projectionMatrix, shaderProgramParams, buffers, [3, 0.0, -15.0], [-1, 1, 0]);
+	drawCube(gl, projectionMatrix, shaderProgramParams, buffers, [-3, 0.0, -15.0], [0, -1 * time, 0]);
+	drawCube(gl, projectionMatrix, shaderProgramParams, buffers, [3, 0.0, -15.0], [0, 1 * time, 0.5*time]);
 
+	time += 0.01;
 }
 
 function drawCube(gl, projectionMatrix, shaderProgramParams, buffers, translation, rotation) {
@@ -190,8 +193,16 @@ function drawCube(gl, projectionMatrix, shaderProgramParams, buffers, translatio
 	//let's rotate the global view
 	mat4.rotate(modelViewMatrix,    // destination matrix
 	            modelViewMatrix,    // matrix to rotate
-	            0.5,                // amount to rotate in radians
-	            rotation);         // axis to rotate around
+	            rotation[0],                // amount to rotate in radians
+	            [1, 0, 0]);         // axis to rotate around
+	mat4.rotate(modelViewMatrix,    // destination matrix
+	            modelViewMatrix,    // matrix to rotate
+	            rotation[1],                // amount to rotate in radians
+	            [0, 1, 0]);         // axis to rotate around
+	mat4.rotate(modelViewMatrix,    // destination matrix
+	            modelViewMatrix,    // matrix to rotate
+	            rotation[2],                // amount to rotate in radians
+	            [0, 0, 1]);         // axis to rotate around
 
 	// Set the vertexPosition attribute of the shader
 	gl.bindBuffer(gl.ARRAY_BUFFER, buffers.position);

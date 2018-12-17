@@ -15,19 +15,21 @@ function main() {
 		program: shaderProgram,
 
 		vertexPosition: gl.getAttribLocation(shaderProgram, 'aVertexPosition'),
-		vertexColor: gl.getAttribLocation(shaderProgram, 'aVertexColor'),
+		textureCoord: gl.getAttribLocation(shaderProgram, 'aTextureCoord'),
 
 		projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
-		modelViewMatrix: gl.getUniformLocation(shaderProgram, 'uModelViewMatrix')
+		modelViewMatrix: gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
+		uSampler: gl.getUniformLocation(shaderProgram, 'uSampler')
 	};
 
 	// set the geometry definition
 	const cubeBuffers = initCubeBuffers(gl);
+	const texture = loadTexture(gl, 'drapeau.jpg');
 
 	// let's render.
 	// As it's now animated, we use the requestAnimationFrame function to smooth it up
 	function render() {
-		drawScene(gl, shaderProgramParams, cubeBuffers);
+		drawScene(gl, shaderProgramParams, cubeBuffers, texture);
 
 		requestAnimationFrame(render);
 	}
@@ -39,16 +41,16 @@ function main() {
 /**
  * Initialize the buffers for the Cube we'll display
  * @param gl {WebGLRenderingContext}
- * @returns {{position: WebGLBuffer, color: WebGLBuffer, indices: WebGLBuffer}}
+ * @returns {{position: WebGLBuffer, textureCoord: WebGLBuffer, indices: WebGLBuffer}}
  */
 function initCubeBuffers(gl) {
 
 	// Buffer for the cube's vertices positions.
 	const positionsBuffer = gl.createBuffer();
-	// Buffer for colors of each vertex of each face
-	const colorsBuffer = gl.createBuffer();
 	// Buffer to hold indices into the vertex array for each faces's vertices.
 	const indicesBuffer = gl.createBuffer();
+	// Buffer for texture coordinates
+	const textureCoordBuffer = gl.createBuffer();
 
 
 	// Positions
@@ -99,27 +101,43 @@ function initCubeBuffers(gl) {
 	}
 
 
-	// Colors
+	// Texture coordinates
 	{
-		const faceColors = [
-			[0.933, 0.737, 0.204, 1.0],    // Front: yellow
-			[0.357, 0.608, 0.835, 1.0],    // Back: blue
-			[0.588, 0.722, 0.482, 1.0],    // Top: green
-			[0.878, 0.592, 0.400, 1.0],    // Bottom: orange
-			[0.760, 0.494, 0.815, 1.0],    // Right: violet
-			[0.267, 0.329, 0.415, 1.0]     // Left: gray
+		gl.bindBuffer(gl.ARRAY_BUFFER, textureCoordBuffer);
+		const textureCoordinates = [
+			// Front
+			0.0, 0.0,
+			1.0, 0.0,
+			1.0, 1.0,
+			0.0, 1.0,
+			// Back
+			0.0, 0.0,
+			1.0, 0.0,
+			1.0, 1.0,
+			0.0, 1.0,
+			// Top
+			0.0, 0.0,
+			1.0, 0.0,
+			1.0, 1.0,
+			0.0, 1.0,
+			// Bottom
+			0.0, 0.0,
+			1.0, 0.0,
+			1.0, 1.0,
+			0.0, 1.0,
+			// Right
+			0.0, 0.0,
+			1.0, 0.0,
+			1.0, 1.0,
+			0.0, 1.0,
+			// Left
+			0.0, 0.0,
+			1.0, 0.0,
+			1.0, 1.0,
+			0.0, 1.0,
 		];
-		// Let's create an array with 4 colors per face (1 per vertex, same color for the 4 vertices of a face)
-		let colors = [];
-		for (let j = 0; j < faceColors.length; ++j) {
-			const c = faceColors[j];
-			colors = colors.concat(c, c, c, c);
 
-		}
-
-		// Create a buffer for the cube's colors.
-		gl.bindBuffer(gl.ARRAY_BUFFER, colorsBuffer);
-		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(textureCoordinates), gl.STATIC_DRAW);
 	}
 
 	// Indices
@@ -140,10 +158,49 @@ function initCubeBuffers(gl) {
 
 	return {
 		position: positionsBuffer,
-		color: colorsBuffer,
+		textureCoord: textureCoordBuffer,
 		indices: indicesBuffer,
 	};
 }
+
+/**
+ *
+ * @param gl {WebGLRenderingContext}
+ * @param url {String}
+ * @returns {WebGLTexture}
+ */
+function loadTexture(gl, url) {
+	const texture = gl.createTexture();
+	gl.bindTexture(gl.TEXTURE_2D, texture);
+
+	const level = 0;
+	const internalFormat = gl.RGBA;
+	const srcFormat = gl.RGBA;
+	const srcType = gl.UNSIGNED_BYTE;
+	gl.texImage2D(gl.TEXTURE_2D,
+	              level, // level
+	              internalFormat, // internalFormat
+	              1, // width
+	              1, // height
+	              0, // border
+	              srcFormat,
+	              srcType,
+	              new Uint8Array([255, 0, 0, 255]) // default color value
+	);
+
+	//image is loaded asynchronously
+	const image = new Image();
+	image.onload = function () {
+		gl.bindTexture(gl.TEXTURE_2D, texture);
+		gl.texImage2D(gl.TEXTURE_2D, level, internalFormat, srcFormat, srcType, image);
+
+		gl.generateMipmap(gl.TEXTURE_2D);
+	};
+	image.src = url;
+
+	return texture;
+}
+
 
 let time = 0.0;
 
@@ -153,7 +210,7 @@ let time = 0.0;
  * @param shaderProgramParams {}
  * @param buffers {{position: WebGLBuffer, color: WebGLBuffer, indices: WebGLBuffer}}
  */
-function drawScene(gl, shaderProgramParams, buffers) {
+function drawScene(gl, shaderProgramParams, buffers, texture) {
 
 	// Clear the color buffer
 	gl.clearColor(0.0, 0.0, 0.0, 1);
@@ -177,13 +234,13 @@ function drawScene(gl, shaderProgramParams, buffers) {
 	                 zNear,
 	                 zFar);
 
-	drawCube(gl, projectionMatrix, shaderProgramParams, buffers, [-3, 0.0, -15.0], [0, -1 * time, 0]);
-	drawCube(gl, projectionMatrix, shaderProgramParams, buffers, [3, 0.0, -15.0], [0, 1 * time, 0.5 * time]);
+	drawCube(gl, projectionMatrix, shaderProgramParams, buffers, texture, [-3, 0.0, -15.0], [-1, -1 * time, 0]);
+	drawCube(gl, projectionMatrix, shaderProgramParams, buffers, texture, [3, 0.0, -15.0], [0, 1 * time, 0.5 * time]);
 
 	time += 0.01;
 }
 
-function drawCube(gl, projectionMatrix, shaderProgramParams, buffers, translation, rotation) {
+function drawCube(gl, projectionMatrix, shaderProgramParams, buffers, texture, translation, rotation) {
 // let's move the scene to -10 along Z axis (as if we moved the camera to +10 on Z)
 	let modelViewMatrix = mat4.create();
 	mat4.translate(modelViewMatrix,     // destination matrix
@@ -216,17 +273,21 @@ function drawCube(gl, projectionMatrix, shaderProgramParams, buffers, translatio
 	);
 	gl.enableVertexAttribArray(shaderProgramParams.vertexPosition);
 
-	// Set the vertexColor attribute of the shader
-	gl.bindBuffer(gl.ARRAY_BUFFER, buffers.color);
+	//Set the texture coordinates
+	gl.bindBuffer(gl.ARRAY_BUFFER, buffers.textureCoord);
 	gl.vertexAttribPointer(
-		shaderProgramParams.vertexColor,
-		4, // size
+		shaderProgramParams.textureCoord,
+		2, // size
 		gl.FLOAT, // type
-		false, // normalized
+		false, //normalized
 		0, // stride
 		0 // offset
 	);
-	gl.enableVertexAttribArray(shaderProgramParams.vertexColor);
+	gl.enableVertexAttribArray(shaderProgramParams.textureCoord);
+	// Tell WebGL we want to affect texture unit 0
+	gl.activeTexture(gl.TEXTURE0);
+	// Bind the texture to texture unit 0
+	gl.bindTexture(gl.TEXTURE_2D, texture);
 
 	// Set indices to use to index the vertices
 	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.indices);

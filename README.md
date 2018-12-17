@@ -22,4 +22,3 @@ Split the DrawScene function to display several time the same cube, with distinc
 
 ## Demo 5 : Add texture
 Apply a simple texture to the cube and modify shaders consequently
- 

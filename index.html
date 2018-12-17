@@ -20,29 +20,32 @@
 <script id="vshader-simple" type="x-shader/x-vertex">#version 300 es
 
 in vec4 aVertexPosition;
-in vec4 aVertexColor;
+in vec2 aTextureCoord;
 
 uniform mat4 uModelViewMatrix;
 uniform mat4 uProjectionMatrix;
 
-out lowp vec4 vColor;
+out vec2 vTextureCoord;
 
 void main(void) {
   gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
-  vColor = aVertexColor;
+  vTextureCoord = aTextureCoord;
 }
+
 
 </script>
 
 <script id="fshader-simple" type="x-shader/x-fragment">#version 300 es
-
 precision mediump float;
 
-in lowp vec4 vColor;
+in vec2 vTextureCoord;
+
+uniform sampler2D uSampler;
+
 out vec4 outColor;
 
 void main(void) {
-  outColor = vColor;
+    outColor = texture(uSampler, vTextureCoord);
 }
 
 </script>

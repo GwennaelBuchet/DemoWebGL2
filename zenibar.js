@@ -22,12 +22,12 @@ function main() {
 	};
 
 	// set the geometry definition
-	const buffers = initBuffers(gl);
+	const cubeBuffers = initCubeBuffers(gl);
 
 	// let's render.
 	// As it's now animated, we use the requestAnimationFrame function to smooth it up
 	function render() {
-		drawScene(gl, shaderProgramParams, buffers);
+		drawScene(gl, shaderProgramParams, cubeBuffers);
 
 		requestAnimationFrame(render);
 	}
@@ -41,7 +41,7 @@ function main() {
  * @param gl {WebGLRenderingContext}
  * @returns {{position: WebGLBuffer, color: WebGLBuffer, indices: WebGLBuffer}}
  */
-function initBuffers(gl) {
+function initCubeBuffers(gl) {
 
 	// Buffer for the cube's vertices positions.
 	const positionsBuffer = gl.createBuffer();
@@ -175,17 +175,23 @@ function drawScene(gl, shaderProgramParams, buffers) {
 	                 zNear,
 	                 zFar);
 
-	// let's move the scene to -10 along Z axis (as if we moved the camera to +10 on Z)
+	drawCube(gl, projectionMatrix, shaderProgramParams, buffers, [-3, 0.0, -15.0], [1, -1, 0]);
+	drawCube(gl, projectionMatrix, shaderProgramParams, buffers, [3, 0.0, -15.0], [-1, 1, 0]);
+
+}
+
+function drawCube(gl, projectionMatrix, shaderProgramParams, buffers, translation, rotation) {
+// let's move the scene to -10 along Z axis (as if we moved the camera to +10 on Z)
 	let modelViewMatrix = mat4.create();
 	mat4.translate(modelViewMatrix,     // destination matrix
 	               modelViewMatrix,     // matrix to translate
-	               [-0.0, 0.0, -10.0]);  // amount to translate
+	               translation);  // amount to translate
 
 	//let's rotate the global view
 	mat4.rotate(modelViewMatrix,    // destination matrix
 	            modelViewMatrix,    // matrix to rotate
 	            0.5,                // amount to rotate in radians
-	            [1, 1, 0]);         // axis to rotate around
+	            rotation);         // axis to rotate around
 
 	// Set the vertexPosition attribute of the shader
 	gl.bindBuffer(gl.ARRAY_BUFFER, buffers.position);

@@ -19,4 +19,7 @@ Let's go to 3D world and display a simple 3D cube
 
 ## Demo 4 : Multiple display and animation
 Split the DrawScene function to display several time the same cube, with distinct animations
+
+## Demo 5 : Add texture
+Apply a simple texture to the cube and modify shaders consequently
  

@@ -24,3 +24,6 @@ Split the DrawScene function to display several time the same cube, with distinc
 Apply a simple texture to the cube and modify shaders consequently
 
 ##Demo 6 : Add light to the scene
+Add light computation in the shaders.
+That means we need to define a normal vector for each vertex in order to compute tha light angle.
+Also, use separate textures for each cube.

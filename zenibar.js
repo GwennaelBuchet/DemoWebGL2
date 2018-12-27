@@ -1,15 +1,13 @@
 function main() {
 	const canvas = document.getElementById("scene");
-
 	const gl = canvas.getContext("webgl2");
+
 	if (!gl) {
 		canvas.style.display = "none";
 		document.getElementById("noContextLayer").style.display = "block";
 	}
-
 	// let's initialize the shaders and the linked program
 	const shaderProgram = initShaderProgram(gl, "vshader-simple", "fshader-simple");
-
 
 	const shaderProgramParams = {
 		program: shaderProgram,
@@ -24,22 +22,89 @@ function main() {
 		uSampler: gl.getUniformLocation(shaderProgram, 'uSampler')
 	};
 
+
 	// set the geometry definition
 	const cubeBuffers = initCubeBuffers(gl);
-	const texture1 = loadTexture(gl, 'biere-mousse-carre.jpg');
-	const texture2 = loadTexture(gl, 'biere2.jpg');
+	let meshBottle;
+
+	const texture1 = loadTexture(gl, "assets/biere-mousse-carre.jpg");
+	const texture2 = loadTexture(gl, "assets/biere2.jpg");
+	loadObjFile("assets/Bottle/12178_bottle_v1_L2.obj")
+		.then(result => {
+			      meshBottle = createBufferFromData(gl, result);
+			      requestAnimationFrame(render);
+		      }, error => alert(error)
+		);
 
 	// let's render.
 	// As it's now animated, we use the requestAnimationFrame function to smooth it up
 	function render() {
-		drawScene(gl, shaderProgramParams, cubeBuffers, texture1, texture2);
+		drawScene(gl, shaderProgramParams, meshBottle, texture1, texture2);
 
 		requestAnimationFrame(render);
 	}
 
-	requestAnimationFrame(render);
+
 }
 
+function loadObjFile(url) {
+
+	return new Promise((resolve, reject) => {
+
+		fetch(url)
+			.then(resp => {
+				return resp.text();
+			})
+			.then(data => {
+				let content = data;
+				let mesh = new OBJ.Mesh(content);
+				resolve(mesh);
+			})
+			.catch(function (error) {
+				reject(JSON.stringify(error));
+			});
+	});
+}
+
+function createBufferFromData(gl, data) {
+
+	// Buffer for the cube's vertices positions.
+	const positionsBuffer = gl.createBuffer();
+	// Buffer to hold indices into the vertex array for each faces's vertices.
+	const indicesBuffer = gl.createBuffer();
+	// Buffer for normals
+	const normalBuffer = gl.createBuffer();
+	// Buffer for texture coordinates
+	const textureCoordBuffer = gl.createBuffer();
+
+
+	// Bind to the positionsBuffer
+	gl.bindBuffer(gl.ARRAY_BUFFER, positionsBuffer);
+	// Fill the buffer with vertices positions
+	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data.vertices), gl.STATIC_DRAW);
+
+
+	gl.bindBuffer(gl.ARRAY_BUFFER, textureCoordBuffer);
+	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data.textures), gl.STATIC_DRAW);
+
+	gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
+	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data.vertexNormals), gl.STATIC_DRAW);
+
+	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indicesBuffer);
+	gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(data.indices), gl.STATIC_DRAW);
+
+	/**
+	 * Actually, the mesh object (data) already embeds buffers, but for the demo I'd prefer spread the buffers
+	 */
+	return {
+		verticesBuffer: positionsBuffer,
+		textureCoordBuffer: textureCoordBuffer,
+		normalsBuffer: normalBuffer,
+		indicesBuffer: indicesBuffer,
+		mesh: data
+	};
+
+}
 
 /**
  * Initialize the buffers for the Cube we'll display
@@ -258,9 +323,9 @@ let time = 0.0;
  * Render the scene
  * @param gl {WebGLRenderingContext}
  * @param shaderProgramParams {}
- * @param buffers {{position: WebGLBuffer, color: WebGLBuffer, indices: WebGLBuffer}}
+ * @param mesh
  */
-function drawScene(gl, shaderProgramParams, buffers, texture1, texture2) {
+function drawScene(gl, shaderProgramParams, mesh, texture1, texture2) {
 
 	// Clear the color buffer
 	gl.clearColor(0.0, 0.0, 0.0, 1);
@@ -284,13 +349,13 @@ function drawScene(gl, shaderProgramParams, buffers, texture1, texture2) {
 	                 zNear,
 	                 zFar);
 
-	drawCube(gl, projectionMatrix, shaderProgramParams, buffers, texture1, [-3, 0.0, -15.0], [-1, -1 * time, 0]);
-	drawCube(gl, projectionMatrix, shaderProgramParams, buffers, texture2, [3, 0.0, -15.0], [0, 1 * time, 0.5 * time]);
+	drawMesh(gl, projectionMatrix, shaderProgramParams, mesh, texture1, [0.0, 0.0, -40.0], [0, -1 * time, 0]);
+	//drawMesh(gl, projectionMatrix, shaderProgramParams, buffers, texture2, [3, 0.0, -15.0], [0, 1 * time, 0.5 * time]);
 
 	time += 0.01;
 }
 
-function drawCube(gl, projectionMatrix, shaderProgramParams, buffers, texture, translation, rotation) {
+function drawMesh(gl, projectionMatrix, shaderProgramParams, mesh, texture, translation, rotation) {
 	let modelViewMatrix = mat4.create();
 	mat4.translate(modelViewMatrix,     // destination matrix
 	               modelViewMatrix,     // matrix to translate
@@ -315,7 +380,7 @@ function drawCube(gl, projectionMatrix, shaderProgramParams, buffers, texture, t
 	mat4.transpose(normalMatrix, normalMatrix);
 
 	// Set the vertexPosition attribute of the shader
-	gl.bindBuffer(gl.ARRAY_BUFFER, buffers.positions);
+	gl.bindBuffer(gl.ARRAY_BUFFER, mesh.verticesBuffer);
 	gl.vertexAttribPointer(
 		shaderProgramParams.vertexPosition,
 		3,      // size
@@ -327,7 +392,7 @@ function drawCube(gl, projectionMatrix, shaderProgramParams, buffers, texture, t
 	gl.enableVertexAttribArray(shaderProgramParams.vertexPosition);
 
 	//Set the texture coordinates
-	gl.bindBuffer(gl.ARRAY_BUFFER, buffers.textureCoord);
+	gl.bindBuffer(gl.ARRAY_BUFFER, mesh.textureCoordBuffer);
 	gl.vertexAttribPointer(
 		shaderProgramParams.textureCoord,
 		2, // size
@@ -343,7 +408,7 @@ function drawCube(gl, projectionMatrix, shaderProgramParams, buffers, texture, t
 	gl.bindTexture(gl.TEXTURE_2D, texture);
 
 	// Normals
-	gl.bindBuffer(gl.ARRAY_BUFFER, buffers.normals);
+	gl.bindBuffer(gl.ARRAY_BUFFER, mesh.normalsBuffer);
 	gl.vertexAttribPointer(
 		shaderProgramParams.vertexNormal,
 		3, // size
@@ -356,7 +421,7 @@ function drawCube(gl, projectionMatrix, shaderProgramParams, buffers, texture, t
 
 
 	// Set indices to use to index the vertices
-	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.indices);
+	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mesh.indicesBuffer);
 
 	// Set the shader program to use
 	gl.useProgram(shaderProgramParams.program);
@@ -377,7 +442,7 @@ function drawCube(gl, projectionMatrix, shaderProgramParams, buffers, texture, t
 
 	// Let's render
 	gl.drawElements(gl.TRIANGLES,
-	                36, // count (number of vertices)
+	                mesh.mesh.vertices.length, // count (number of vertices)
 	                gl.UNSIGNED_SHORT, // type
 	                0 // offset
 	);

@@ -6,6 +6,7 @@ Resources :
  * https://github.com/mdn/webgl-examples
  * https://webgl2fundamentals.org
  * https://www.khronos.org/registry/webgl/specs/latest/2.0/
+ * https://github.com/frenchtoast747/webgl-obj-loader
 
 
 ## Demo 1 : Setup
@@ -26,7 +27,12 @@ Apply a simple texture to the cube and modify shaders consequently
 ## Demo 6 : Add light to the scene
 Add light computation in the shaders.
 That means we need to define a normal vector for each vertex in order to compute tha light angle.
-Also, use separate textures for each cube.
+Also, use separate textures for each cube.bj
 
 ## Demo 7 : load external 3D model file
+Load a .obj model file using the objLoader script.
+Websites to download models :
+ - https://www.turbosquid.com
+ - https://free3d.com/3d-models/obj
+ - ...
  

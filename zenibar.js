@@ -34,37 +34,54 @@ function initGL(canvas) {
  */
 function initMouseEvents(canvas) {
 	// Mouse interaction
-	canvas.addEventListener("mousedown", mouseDown, false);
-	canvas.addEventListener("mouseup", mouseUp, false);
-	canvas.addEventListener("mouseout", mouseUp, false);
-	canvas.addEventListener("mousemove", mouseMove, false);
+	canvas.addEventListener("mousedown", handleMouseDown, false);
+	canvas.addEventListener("mouseup", handleMouseUp, false);
+	canvas.addEventListener("mouseout", handleMouseUp, false);
+	canvas.addEventListener("mousemove", handleMouseMove, false);
 }
 
-let drag = false;
-let old_x, old_y;
-let dX = 0, dY = 0;
-let mouseDown = function (e) {
-	drag = true;
-	old_x = e.pageX;
-	old_y = e.pageY;
-	e.preventDefault();
+let mouseDown = false;
+let lastMouseX = null;
+let lastMouseY = null;
+
+let globalSceneViewMatrix = mat4.create();
+mat4.identity(globalSceneViewMatrix);
+
+function handleMouseDown(event) {
+	mouseDown = true;
+	lastMouseX = event.clientX;
+	lastMouseY = event.clientY;
+
 	return false;
-};
+}
 
-let mouseUp = function (e) {
-	drag = false;
-};
+function handleMouseUp(event) {
+	mouseDown = false;
+}
 
-let mouseMove = function (e) {
-	if (!drag) {
-		return false;
+function handleMouseMove(event) {
+	if (!mouseDown) {
+		return;
 	}
-	dX = (e.pageX - old_x);// * 2 * Math.PI / canvas.width;
-	dY = (e.pageY - old_y);// * 2 * Math.PI / canvas.height;
-	old_x = e.pageX;
-	old_y = e.pageY;
-	e.preventDefault();
-};
+	let newX = event.clientX;
+	let newY = event.clientY;
+
+	let deltaX = newX - lastMouseX;
+	let newRotationMatrix = mat4.create();
+	mat4.identity(newRotationMatrix);
+	mat4.rotate(newRotationMatrix, newRotationMatrix, degToRad(deltaX / 10), [0, 1, 0]);
+
+	var deltaY = newY - lastMouseY;
+	mat4.rotate(newRotationMatrix, newRotationMatrix, degToRad(deltaY / 10), [1, 0, 0]);
+	mat4.multiply(globalSceneViewMatrix, newRotationMatrix, globalSceneViewMatrix);
+
+	lastMouseX = newX;
+	lastMouseY = newY;
+}
+
+function degToRad(degrees) {
+	return degrees * Math.PI / 180;
+}
 
 /**
  * initialize all shader programs
@@ -243,7 +260,7 @@ function loadMeshes() {
 			      let eltBottle = {
 				      mesh: bottle,
 				      translation: [0, 1, -20],
-				      rotation: [-Math.PI/2., 0, 0],
+				      rotation: [-Math.PI / 2., 0, 0],
 				      scale: [0.1, 0.1, 0.1],
 				      texture: textures[1],
 				      useTexture: true
@@ -537,6 +554,10 @@ function initCubeBuffers() {
 
 function drawMesh(projectionMatrix, shaderProgramParams, elt) {
 	let modelViewMatrix = mat4.create();
+
+
+	mat4.multiply(modelViewMatrix, modelViewMatrix, globalSceneViewMatrix);
+
 	mat4.translate(modelViewMatrix,     // destination matrix
 	               modelViewMatrix,     // matrix to translate
 	               elt.translation);   // amount to translate
@@ -676,6 +697,7 @@ function drawScene() {
 	                 0.1, // zNear,
 	                 300 //zFar
 	);
+
 
 	for (let elt of scene) {
 		drawMesh(projectionMatrix, shaderProgramParams, elt);

@@ -57,12 +57,18 @@ in vec4 vVertexColor;
 in vec3 vLighting;
 
 uniform sampler2D uSampler;
+uniform bool uUseTexture;
 
 out vec4 outColor;
 
 void main(void) {
-    vec4 texelColor = vVertexColor; //texture(uSampler, vTextureCoord);
-
+    vec4 texelColor;
+     if (uUseTexture == true) {
+        texelColor = texture(uSampler, vTextureCoord);
+     }
+     else {
+        texelColor = vVertexColor;
+     }
 
     outColor = vec4(texelColor.rgb * vLighting, texelColor.a);
 }

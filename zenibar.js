@@ -5,30 +5,12 @@ let textures = [];
 function main() {
 	const canvas = document.getElementById("scene");
 	initGL(canvas);
+	initMouseEvents(canvas);
 	const shaderProgramParams = initShaders();
 	loadTextures();
-	initMeshes();
+	loadMeshes();
 
-
-	// Mouse interaction
-	canvas.addEventListener("mousedown", mouseDown, false);
-	canvas.addEventListener("mouseup", mouseUp, false);
-	canvas.addEventListener("mouseout", mouseUp, false);
-	canvas.addEventListener("mousemove", mouseMove, false);
-
-
-	// set the geometry definition
-
-	let meshBottle;
-
-
-	loadObjFile("assets/Bottle/12178_bottle_v1_L2.obj")
-		.then(result => {
-			      meshBottle = createBufferFromData(result,
-			                                        {translation: [0, 0, -20], rotation: [0, 0, 0], scale: [1, 1, 1]});
-			      requestAnimationFrame(render);
-		      }, error => alert(error)
-		);
+	render();
 
 	// let's render.
 	// As it's now animated, we use the requestAnimationFrame function to smooth it up
@@ -54,43 +36,20 @@ function initGL(canvas) {
 }
 
 /**
- * initialize all shader programs
- * @returns {{program: WebGLProgram, vertexPosition: GLint, vertexNormal: GLint, textureCoord: GLint, vertexColor: GLint, projectionMatrix: WebGLUniformLocation, modelViewMatrix: WebGLUniformLocation, normalMatrix: WebGLUniformLocation, uSampler: WebGLUniformLocation}}
+ * Initialize mouse events to move the scene view
+ * @param canvas
  */
-function initShaders() {
-	// let's initialize the shaders and the linked program
-	const shaderProgram = initShaderProgram("vshader-simple", "fshader-simple");
-
-	return {
-		program: shaderProgram,
-
-		vertexPosition: gl.getAttribLocation(shaderProgram, 'aVertexPosition'),
-		vertexNormal: gl.getAttribLocation(shaderProgram, 'aVertexNormal'),
-		textureCoord: gl.getAttribLocation(shaderProgram, 'aTextureCoord'),
-		vertexColor: gl.getAttribLocation(shaderProgram, 'aVertexColor'),
-
-		projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
-		modelViewMatrix: gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
-		normalMatrix: gl.getUniformLocation(shaderProgram, 'uNormalMatrix'),
-		uSampler: gl.getUniformLocation(shaderProgram, 'uSampler')
-	};
-}
-
-function initMeshes() {
-	const gridBuffers = initGridBuffers();
-
-	meshes[0] = gridBuffers;
-}
-
-function loadTextures() {
-	textures[0] = loadTexture("assets/biere-mousse-carre.jpg");
-	textures[1] = loadTexture("assets/biere2.jpg");
+function initMouseEvents(canvas) {
+	// Mouse interaction
+	canvas.addEventListener("mousedown", mouseDown, false);
+	canvas.addEventListener("mouseup", mouseUp, false);
+	canvas.addEventListener("mouseout", mouseUp, false);
+	canvas.addEventListener("mousemove", mouseMove, false);
 }
 
 let drag = false;
 let old_x, old_y;
 let dX = 0, dY = 0;
-
 let mouseDown = function (e) {
 	drag = true;
 	old_x = e.pageX;
@@ -114,6 +73,148 @@ let mouseMove = function (e) {
 	e.preventDefault();
 };
 
+/**
+ * initialize all shader programs
+ * @returns {{program: WebGLProgram, vertexPosition: GLint, vertexNormal: GLint, textureCoord: GLint, vertexColor: GLint, projectionMatrix: WebGLUniformLocation, modelViewMatrix: WebGLUniformLocation, normalMatrix: WebGLUniformLocation, uSampler: WebGLUniformLocation}}
+ */
+function initShaders() {
+	// let's initialize the shaders and the linked program
+	const shaderProgram = initShaderProgram("vshader-simple", "fshader-simple");
+
+	return {
+		program: shaderProgram,
+
+		vertexPosition: gl.getAttribLocation(shaderProgram, 'aVertexPosition'),
+		vertexNormal: gl.getAttribLocation(shaderProgram, 'aVertexNormal'),
+		textureCoord: gl.getAttribLocation(shaderProgram, 'aTextureCoord'),
+		vertexColor: gl.getAttribLocation(shaderProgram, 'aVertexColor'),
+
+		projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
+		modelViewMatrix: gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
+		normalMatrix: gl.getUniformLocation(shaderProgram, 'uNormalMatrix'),
+
+		uSampler: gl.getUniformLocation(shaderProgram, 'uSampler'),
+		useTexture: gl.getUniformLocation(shaderProgram, "uUseTexture")
+	};
+}
+
+/**
+ * Initialize Vertex and Fragment shaders + "linked" program
+ * @param vertexShaderSrcID {String}
+ * @param fragmentShaderSrcID {String}
+ * @returns {WebGLProgram}
+ * */
+function initShaderProgram(vertexShaderSrcID, fragmentShaderSrcID) {
+	let vertexShaderSource = document.getElementById(vertexShaderSrcID).text;
+	let fragmentShaderSource = document.getElementById(fragmentShaderSrcID).text;
+
+	let vertexShader = createShader(gl.VERTEX_SHADER, vertexShaderSource);
+	let fragmentShader = createShader(gl.FRAGMENT_SHADER, fragmentShaderSource);
+
+	return createProgram(vertexShader, fragmentShader);
+}
+
+/**
+ * Load a "shader" script into a shader object (WebGLShader)
+ * @param type {number} gl.VERTEX_SHADER or gl.FRAGMENT_SHADER
+ * @param source {String} source code for the shader
+ * @returns {WebGLShader}
+ */
+function createShader(type, source) {
+	let shader = gl.createShader(type);
+	gl.shaderSource(shader, source);
+	gl.compileShader(shader);
+
+	let success = gl.getShaderParameter(shader, gl.COMPILE_STATUS);
+	if (success) {
+		return shader;
+	}
+
+	console.log(gl.getShaderInfoLog(shader));
+	gl.deleteShader(shader);
+}
+
+/**
+ * Link both Vertex and Fragment shaders into a "Program" (WebGLProgram)
+ * @param vertexShader {WebGLShader}
+ * @param fragmentShader {WebGLShader}
+ * @returns {WebGLProgram}
+ */
+function createProgram(vertexShader, fragmentShader) {
+	let program = gl.createProgram();
+	gl.attachShader(program, vertexShader);
+	gl.attachShader(program, fragmentShader);
+	gl.linkProgram(program);
+
+	let success = gl.getProgramParameter(program, gl.LINK_STATUS);
+	if (success) {
+		return program;
+	}
+
+	console.log(gl.getProgramInfoLog(program));
+	gl.deleteProgram(program);
+}
+
+
+function loadTextures() {
+	textures[0] = loadTexture("assets/biere-mousse-carre.jpg");
+	textures[1] = loadTexture("assets/biere2.jpg");
+}
+
+/**
+ *
+ * @param url {String}
+ * @returns {WebGLTexture}
+ */
+function loadTexture(url) {
+	const texture = gl.createTexture();
+	gl.bindTexture(gl.TEXTURE_2D, texture);
+
+	const level = 0;
+	const internalFormat = gl.RGBA;
+	const srcFormat = gl.RGBA;
+	const srcType = gl.UNSIGNED_BYTE;
+	gl.texImage2D(gl.TEXTURE_2D,
+	              level, // level
+	              internalFormat, // internalFormat
+	              1, // width
+	              1, // height
+	              0, // border
+	              srcFormat,
+	              srcType,
+	              new Uint8Array([255, 0, 0, 255]) // default color value
+	);
+
+	//image is loaded asynchronously
+	const image = new Image();
+	image.onload = function () {
+		gl.bindTexture(gl.TEXTURE_2D, texture);
+		gl.texImage2D(gl.TEXTURE_2D, level, internalFormat, srcFormat, srcType, image);
+
+		gl.generateMipmap(gl.TEXTURE_2D);
+	};
+	image.src = url;
+
+	return texture;
+}
+
+/**
+ * Load meshes into the "meshes" global array
+ */
+function loadMeshes() {
+	meshes.push(initGridBuffers());
+
+	loadObjFile("assets/Bottle/12178_bottle_v1_L2.obj")
+		.then(result => {
+			      meshes.push(createBufferFromData(result,
+			                                       {translation: [0, 0, -20], rotation: [0, 0, 0], scale: [1, 1, 1]},
+			                                       textures[0]
+			                  )
+			      );
+		      }, error => alert(error)
+		);
+}
+
 function loadObjFile(url) {
 
 	return new Promise((resolve, reject) => {
@@ -133,7 +234,7 @@ function loadObjFile(url) {
 	});
 }
 
-function createBufferFromData(data, srt) {
+function createBufferFromData(data, srt, texture) {
 
 	// Buffer for the cube's vertices positions.
 	const positionsBuffer = gl.createBuffer();
@@ -142,9 +243,9 @@ function createBufferFromData(data, srt) {
 	// Buffer for normals
 	const normalsBuffer = gl.createBuffer();
 	// Buffer for texture coordinates
-	let textureCoordsBuffer = undefined;
+	let textureCoordsBuffer = null;
 	// Buffer for colors
-	let colorsBuffer = undefined;
+	let colorsBuffer = null;
 
 
 	// Bind to the positionsBuffer
@@ -152,11 +253,11 @@ function createBufferFromData(data, srt) {
 	// Fill the buffer with vertices positions
 	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data.vertices), gl.STATIC_DRAW);
 
-	if (data.textures !== undefined && data.textures !== null) {
+	//if (data.textures !== undefined && data.textures !== null) {
 		textureCoordsBuffer = gl.createBuffer();
 		gl.bindBuffer(gl.ARRAY_BUFFER, textureCoordsBuffer);
 		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data.textures), gl.STATIC_DRAW);
-	}
+	//}
 
 	if (data.colors !== undefined && data.colors !== null) {
 		colorsBuffer = gl.createBuffer();
@@ -179,7 +280,9 @@ function createBufferFromData(data, srt) {
 		data: data,
 		translation: srt.translation,
 		rotation: srt.rotation,
-		scale: srt.scale
+		scale: srt.scale,
+		texture: texture,
+		useTexture: texture !== null
 	};
 
 }
@@ -244,45 +347,9 @@ function initGridBuffers() {
 		                            translation: [0, 0, -20],
 		                            rotation: [0.1, 0, 0],
 		                            scale: [1, 1, 1]
-	                            }
+	                            },
+	                            null
 	);
-}
-
-/**
- *
- * @param url {String}
- * @returns {WebGLTexture}
- */
-function loadTexture(url) {
-	const texture = gl.createTexture();
-	gl.bindTexture(gl.TEXTURE_2D, texture);
-
-	const level = 0;
-	const internalFormat = gl.RGBA;
-	const srcFormat = gl.RGBA;
-	const srcType = gl.UNSIGNED_BYTE;
-	gl.texImage2D(gl.TEXTURE_2D,
-	              level, // level
-	              internalFormat, // internalFormat
-	              1, // width
-	              1, // height
-	              0, // border
-	              srcFormat,
-	              srcType,
-	              new Uint8Array([255, 0, 0, 255]) // default color value
-	);
-
-	//image is loaded asynchronously
-	const image = new Image();
-	image.onload = function () {
-		gl.bindTexture(gl.TEXTURE_2D, texture);
-		gl.texImage2D(gl.TEXTURE_2D, level, internalFormat, srcFormat, srcType, image);
-
-		gl.generateMipmap(gl.TEXTURE_2D);
-	};
-	image.src = url;
-
-	return texture;
 }
 
 
@@ -318,13 +385,13 @@ function drawScene(shaderProgramParams, meshes) {
 	                 zFar);
 
 	for (let mesh of meshes) {
-		drawMesh(projectionMatrix, shaderProgramParams, mesh, textures[0]);
+		drawMesh(projectionMatrix, shaderProgramParams, mesh);
 	}
 
 	time += 0.01;
 }
 
-function drawMesh(projectionMatrix, shaderProgramParams, mesh, texture) {
+function drawMesh(projectionMatrix, shaderProgramParams, mesh) {
 	let modelViewMatrix = mat4.create();
 	mat4.translate(modelViewMatrix,     // destination matrix
 	               modelViewMatrix,     // matrix to translate
@@ -367,7 +434,7 @@ function drawMesh(projectionMatrix, shaderProgramParams, mesh, texture) {
 	}
 
 	//Set the texture coordinates
-	{
+	if (mesh.texture !== null) {
 		gl.bindBuffer(gl.ARRAY_BUFFER, mesh.textureCoordsBuffer);
 		gl.vertexAttribPointer(
 			shaderProgramParams.textureCoord,
@@ -381,7 +448,7 @@ function drawMesh(projectionMatrix, shaderProgramParams, mesh, texture) {
 		// Tell WebGL we want to affect texture unit 0
 		gl.activeTexture(gl.TEXTURE0);
 		// Bind the texture to texture unit 0
-		gl.bindTexture(gl.TEXTURE_2D, texture);
+		gl.bindTexture(gl.TEXTURE_2D, mesh.texture);
 	}
 
 	// Set the vertexColor attribute of the shader
@@ -432,6 +499,7 @@ function drawMesh(projectionMatrix, shaderProgramParams, mesh, texture) {
 		shaderProgramParams.normalMatrix,
 		false, // transpose
 		normalMatrix);
+	gl.uniform1i(shaderProgramParams.useTexture, mesh.useTexture);
 
 	// Let's render
 	gl.drawElements(gl.TRIANGLES,
@@ -439,64 +507,6 @@ function drawMesh(projectionMatrix, shaderProgramParams, mesh, texture) {
 	                gl.UNSIGNED_SHORT, // type
 	                0 // offset
 	);
-}
-
-
-/**
- * Initialize Vertex and Fragment shaders + "linked" program
- * @param vertexShaderSrcID {String}
- * @param fragmentShaderSrcID {String}
- * @returns {WebGLProgram}
- * */
-function initShaderProgram(vertexShaderSrcID, fragmentShaderSrcID) {
-	let vertexShaderSource = document.getElementById(vertexShaderSrcID).text;
-	let fragmentShaderSource = document.getElementById(fragmentShaderSrcID).text;
-
-	let vertexShader = createShader(gl.VERTEX_SHADER, vertexShaderSource);
-	let fragmentShader = createShader(gl.FRAGMENT_SHADER, fragmentShaderSource);
-
-	return createProgram(vertexShader, fragmentShader);
-}
-
-/**
- * Load a "shader" script into a shader object (WebGLShader)
- * @param type {number} gl.VERTEX_SHADER or gl.FRAGMENT_SHADER
- * @param source {String} source code for the shader
- * @returns {WebGLShader}
- */
-function createShader(type, source) {
-	let shader = gl.createShader(type);
-	gl.shaderSource(shader, source);
-	gl.compileShader(shader);
-
-	let success = gl.getShaderParameter(shader, gl.COMPILE_STATUS);
-	if (success) {
-		return shader;
-	}
-
-	console.log(gl.getShaderInfoLog(shader));
-	gl.deleteShader(shader);
-}
-
-/**
- * Link both Vertex and Fragment shaders into a "Program" (WebGLProgram)
- * @param vertexShader {WebGLShader}
- * @param fragmentShader {WebGLShader}
- * @returns {WebGLProgram}
- */
-function createProgram(vertexShader, fragmentShader) {
-	let program = gl.createProgram();
-	gl.attachShader(program, vertexShader);
-	gl.attachShader(program, fragmentShader);
-	gl.linkProgram(program);
-
-	let success = gl.getProgramParameter(program, gl.LINK_STATUS);
-	if (success) {
-		return program;
-	}
-
-	console.log(gl.getProgramInfoLog(program));
-	gl.deleteProgram(program);
 }
 
 

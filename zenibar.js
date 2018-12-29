@@ -2,6 +2,7 @@ let gl;
 let meshes = [];
 let textures = [];
 let shaderProgramParams;
+let scene = [];
 
 function main() {
 	const canvas = document.getElementById("scene");
@@ -9,7 +10,7 @@ function main() {
 	initMouseEvents(canvas);
 	initShaders();
 	loadTextures();
-	loadMeshes();
+	loadScene();
 
 	drawScene();
 }
@@ -190,13 +191,49 @@ function loadTexture(url) {
 	return texture;
 }
 
+function loadScene() {
+	loadMeshes();
+
+	let eltGrid = {
+		mesh: meshes[0], // grid mesh
+		translation: [0, 0, -20],
+		rotation: [.1, 0, 0],
+		scale: [1, 1, 1],
+		texture: null,
+		useTexture: 0
+	};
+	scene.push(eltGrid);
+
+	let eltCube1 = {
+		mesh: meshes[1], // cube mesh
+		translation: [-5, 1, -20],
+		rotation: [.1, 0.1, 0],
+		scale: [1, 1, 1],
+		texture: null,
+		useTexture: 0
+	};
+	scene.push(eltCube1);
+
+	let eltCube2 = {
+		mesh: meshes[1], // re-use the same cube mesh
+		translation: [5, 1, -15],
+		rotation: [.1, 1, 0],
+		scale: [1, 1, 1],
+		texture: textures[1],
+		useTexture: 0
+	};
+	scene.push(eltCube2);
+}
+
 /**
  * Load meshes into the "meshes" global array
  */
 function loadMeshes() {
 	meshes.push(initGridBuffers());
 
-	loadObjFile("assets/Bottle/12178_bottle_v1_L2.obj")
+	meshes.push(initCubeBuffers());
+
+	/*loadObjFile("assets/Bottle/12178_bottle_v1_L2.obj")
 		.then(result => {
 			      meshes.push(createBufferFromData(result,
 			                                       {translation: [0, 0, -20], rotation: [0, 0, 0], scale: [1, 1, 1]},
@@ -204,7 +241,7 @@ function loadMeshes() {
 			                  )
 			      );
 		      }, error => alert(error)
-		);
+		);*/
 }
 
 function loadObjFile(url) {
@@ -226,7 +263,7 @@ function loadObjFile(url) {
 	});
 }
 
-function createBufferFromData(data, srt, texture) {
+function createBufferFromData(data) {
 
 	// Buffer for the cube's vertices positions.
 	const positionsBuffer = gl.createBuffer();
@@ -246,9 +283,9 @@ function createBufferFromData(data, srt, texture) {
 	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data.vertices), gl.STATIC_DRAW);
 
 	//if (data.textures !== undefined && data.textures !== null) {
-		textureCoordsBuffer = gl.createBuffer();
-		gl.bindBuffer(gl.ARRAY_BUFFER, textureCoordsBuffer);
-		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data.textures), gl.STATIC_DRAW);
+	textureCoordsBuffer = gl.createBuffer();
+	gl.bindBuffer(gl.ARRAY_BUFFER, textureCoordsBuffer);
+	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data.textures), gl.STATIC_DRAW);
 	//}
 
 	if (data.colors !== undefined && data.colors !== null) {
@@ -269,12 +306,7 @@ function createBufferFromData(data, srt, texture) {
 		colorsBuffer: colorsBuffer,
 		normalsBuffer: normalsBuffer,
 		indicesBuffer: indicesBuffer,
-		data: data,
-		translation: srt.translation,
-		rotation: srt.rotation,
-		scale: srt.scale,
-		texture: texture,
-		useTexture: texture !== null
+		data: data
 	};
 
 }
@@ -327,6 +359,158 @@ function initGridBuffers() {
 		}
 	}
 
+	return createBufferFromData({
+		                            vertices: positions,
+		                            textures: textureCoordinates,
+		                            colors: colors,
+		                            normals: normals,
+		                            indices: indices
+	                            }
+	);
+}
+
+/**
+ * Initialize the buffers for the Cube we'll display
+ * @returns {{position: WebGLBuffer, textureCoord: WebGLBuffer, indices: WebGLBuffer}}
+ */
+function initCubeBuffers() {
+
+	// Define the position for each vertex of each face
+	const positions = [
+		// Front
+		-1.0, -1.0, 1.0, //x, y, z
+		1.0, -1.0, 1.0,
+		1.0, 1.0, 1.0,
+		-1.0, 1.0, 1.0,
+
+		// Back
+		-1.0, -1.0, -1.0,
+		-1.0, 1.0, -1.0,
+		1.0, 1.0, -1.0,
+		1.0, -1.0, -1.0,
+
+		// Top
+		-1.0, 1.0, -1.0,
+		-1.0, 1.0, 1.0,
+		1.0, 1.0, 1.0,
+		1.0, 1.0, -1.0,
+
+		// Bottom
+		-1.0, -1.0, -1.0,
+		1.0, -1.0, -1.0,
+		1.0, -1.0, 1.0,
+		-1.0, -1.0, 1.0,
+
+		// Right
+		1.0, -1.0, -1.0,
+		1.0, 1.0, -1.0,
+		1.0, 1.0, 1.0,
+		1.0, -1.0, 1.0,
+
+		// Left
+		-1.0, -1.0, -1.0,
+		-1.0, -1.0, 1.0,
+		-1.0, 1.0, 1.0,
+		-1.0, 1.0, -1.0
+	];
+
+	// Texture coordinates
+	const textureCoordinates = [
+		// Front
+		0.0, 0.0,
+		1.0, 0.0,
+		1.0, 1.0,
+		0.0, 1.0,
+		// Back
+		0.0, 0.0,
+		1.0, 0.0,
+		1.0, 1.0,
+		0.0, 1.0,
+		// Top
+		0.0, 0.0,
+		1.0, 0.0,
+		1.0, 1.0,
+		0.0, 1.0,
+		// Bottom
+		0.0, 0.0,
+		1.0, 0.0,
+		1.0, 1.0,
+		0.0, 1.0,
+		// Right
+		0.0, 0.0,
+		1.0, 0.0,
+		1.0, 1.0,
+		0.0, 1.0,
+		// Left
+		0.0, 0.0,
+		1.0, 0.0,
+		1.0, 1.0,
+		0.0, 1.0,
+	];
+
+	const faceColors = [
+		[0.933, 0.737, 0.204, 1.0],    // Front: yellow
+		[0.357, 0.608, 0.835, 1.0],    // Back: blue
+		[0.588, 0.722, 0.482, 1.0],    // Top: green
+		[0.878, 0.592, 0.400, 1.0],    // Bottom: orange
+		[0.760, 0.494, 0.815, 1.0],    // Right: violet
+		[0.267, 0.329, 0.415, 1.0]     // Left: gray
+	];
+	// Let's create an array with 4 colors per face (1 per vertex, same color for the 4 vertices of a face)
+	let colors = [];
+	for (let j = 0; j < faceColors.length; ++j) {
+		const c = faceColors[j];
+		colors = colors.concat(c, c, c, c);
+
+	}
+
+	const normals = [
+		// Front
+		0.0, 0.0, 1.0,
+		0.0, 0.0, 1.0,
+		0.0, 0.0, 1.0,
+		0.0, 0.0, 1.0,
+
+		// Back
+		0.0, 0.0, -1.0,
+		0.0, 0.0, -1.0,
+		0.0, 0.0, -1.0,
+		0.0, 0.0, -1.0,
+
+		// Top
+		0.0, 1.0, 0.0,
+		0.0, 1.0, 0.0,
+		0.0, 1.0, 0.0,
+		0.0, 1.0, 0.0,
+
+		// Bottom
+		0.0, -1.0, 0.0,
+		0.0, -1.0, 0.0,
+		0.0, -1.0, 0.0,
+		0.0, -1.0, 0.0,
+
+		// Right
+		1.0, 0.0, 0.0,
+		1.0, 0.0, 0.0,
+		1.0, 0.0, 0.0,
+		1.0, 0.0, 0.0,
+
+		// Left
+		-1.0, 0.0, 0.0,
+		-1.0, 0.0, 0.0,
+		-1.0, 0.0, 0.0,
+		-1.0, 0.0, 0.0
+	];
+
+	// indices of vertices for each face
+	const indices = [
+		0, 1, 2, 0, 2, 3,         // front
+		4, 5, 6, 4, 6, 7,         // back
+		8, 9, 10, 8, 10, 11,      // top
+		12, 13, 14, 12, 14, 15,   // bottom
+		16, 17, 18, 16, 18, 19,   // right
+		20, 21, 22, 20, 22, 23,   // left
+	];
 
 	return createBufferFromData({
 		                            vertices: positions,
@@ -334,39 +518,33 @@ function initGridBuffers() {
 		                            colors: colors,
 		                            normals: normals,
 		                            indices: indices
-	                            },
-	                            {
-		                            translation: [0, 0, -20],
-		                            rotation: [0.1, 0, 0],
-		                            scale: [1, 1, 1]
-	                            },
-	                            null
+	                            }
 	);
 }
 
-function drawMesh(projectionMatrix, shaderProgramParams, mesh) {
+function drawMesh(projectionMatrix, shaderProgramParams, elt) {
 	let modelViewMatrix = mat4.create();
 	mat4.translate(modelViewMatrix,     // destination matrix
 	               modelViewMatrix,     // matrix to translate
-	               mesh.translation);        // amount to translate
+	               elt.translation);   // amount to translate
 
 	//let's rotate the global view
 	mat4.rotate(modelViewMatrix,    // destination matrix
 	            modelViewMatrix,    // matrix to rotate
-	            mesh.rotation[0],        // amount to rotate in radians
+	            elt.rotation[0],   // amount to rotate in radians
 	            [1, 0, 0]);         // axis to rotate around (X)
-	mat4.rotate(modelViewMatrix,    // destination matrix
-	            modelViewMatrix,    // matrix to rotate
-	            mesh.rotation[1],        // amount to rotate in radians
+	mat4.rotate(modelViewMatrix,
+	            modelViewMatrix,
+	            elt.rotation[1],
 	            [0, 1, 0]);         // axis to rotate around (Y)
-	mat4.rotate(modelViewMatrix,    // destination matrix
-	            modelViewMatrix,    // matrix to rotate
-	            mesh.rotation[2],        // amount to rotate in radians
+	mat4.rotate(modelViewMatrix,
+	            modelViewMatrix,
+	            elt.rotation[2],
 	            [0, 0, 1]);         // axis to rotate around (Z)
 
 	mat4.scale(modelViewMatrix,
 	           modelViewMatrix,
-	           mesh.scale);
+	           elt.scale);
 
 	const normalMatrix = mat4.create();
 	mat4.invert(normalMatrix, modelViewMatrix);
@@ -374,7 +552,7 @@ function drawMesh(projectionMatrix, shaderProgramParams, mesh) {
 
 	// Set the vertexPosition attribute of the shader
 	{
-		gl.bindBuffer(gl.ARRAY_BUFFER, mesh.verticesBuffer);
+		gl.bindBuffer(gl.ARRAY_BUFFER, elt.mesh.verticesBuffer);
 		gl.vertexAttribPointer(
 			shaderProgramParams.vertexPosition,
 			3,      // size : X,Y,Z = 3 values
@@ -387,8 +565,8 @@ function drawMesh(projectionMatrix, shaderProgramParams, mesh) {
 	}
 
 	//Set the texture coordinates
-	if (mesh.texture !== null) {
-		gl.bindBuffer(gl.ARRAY_BUFFER, mesh.textureCoordsBuffer);
+	if (elt.texture !== null && elt.useTexture === 1) {
+		gl.bindBuffer(gl.ARRAY_BUFFER, elt.mesh.textureCoordsBuffer);
 		gl.vertexAttribPointer(
 			shaderProgramParams.textureCoord,
 			2, // size : U,V = 2 values
@@ -401,12 +579,12 @@ function drawMesh(projectionMatrix, shaderProgramParams, mesh) {
 		// Tell WebGL we want to affect texture unit 0
 		gl.activeTexture(gl.TEXTURE0);
 		// Bind the texture to texture unit 0
-		gl.bindTexture(gl.TEXTURE_2D, mesh.texture);
+		gl.bindTexture(gl.TEXTURE_2D, elt.texture);
 	}
 
 	// Set the vertexColor attribute of the shader
 	{
-		gl.bindBuffer(gl.ARRAY_BUFFER, mesh.colorsBuffer);
+		gl.bindBuffer(gl.ARRAY_BUFFER, elt.mesh.colorsBuffer);
 		gl.vertexAttribPointer(
 			shaderProgramParams.vertexColor,
 			4, // size : R,G,B,A = 4 values
@@ -420,7 +598,7 @@ function drawMesh(projectionMatrix, shaderProgramParams, mesh) {
 
 	// Normals
 	{
-		gl.bindBuffer(gl.ARRAY_BUFFER, mesh.normalsBuffer);
+		gl.bindBuffer(gl.ARRAY_BUFFER, elt.mesh.normalsBuffer);
 		gl.vertexAttribPointer(
 			shaderProgramParams.vertexNormal,
 			3, // size : X,Y,Z = 3 values
@@ -434,7 +612,7 @@ function drawMesh(projectionMatrix, shaderProgramParams, mesh) {
 
 
 	// Set indices to use to index the vertices
-	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mesh.indicesBuffer);
+	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, elt.mesh.indicesBuffer);
 
 	// Set the shader program to use
 	gl.useProgram(shaderProgramParams.program);
@@ -452,11 +630,11 @@ function drawMesh(projectionMatrix, shaderProgramParams, mesh) {
 		shaderProgramParams.normalMatrix,
 		false, // transpose
 		normalMatrix);
-	gl.uniform1i(shaderProgramParams.useTexture, mesh.useTexture);
+	gl.uniform1i(shaderProgramParams.useTexture, elt.useTexture);
 
 	// Let's render
 	gl.drawElements(gl.TRIANGLES,
-	                mesh.data.indices.length, // count (number of indices)
+	                elt.mesh.data.indices.length, // count (number of indices)
 	                gl.UNSIGNED_SHORT, // type
 	                0 // offset
 	);
@@ -477,22 +655,16 @@ function drawScene() {
 
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-
-	const fieldOfView = 45 * Math.PI / 180;   // in radians
-	const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
-	//define the field of view / deepness
-	const zNear = 0.1;
-	const zFar = 100.0;
-
 	const projectionMatrix = mat4.create();
 	mat4.perspective(projectionMatrix,
-	                 fieldOfView,
-	                 aspect,
-	                 zNear,
-	                 zFar);
+	                 45 * Math.PI / 180, // fieldOfView, in radians
+	                 gl.canvas.clientWidth / gl.canvas.clientHeight, // aspect
+	                 0.1, // zNear,
+	                 100 //zFar
+	);
 
-	for (let mesh of meshes) {
-		drawMesh(projectionMatrix, shaderProgramParams, mesh);
+	for (let elt of scene) {
+		drawMesh(projectionMatrix, shaderProgramParams, elt);
 	}
 
 	time += 0.01;

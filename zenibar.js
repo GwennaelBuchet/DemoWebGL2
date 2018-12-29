@@ -7,7 +7,7 @@ function main() {
 	const canvas = document.getElementById("scene");
 	initGL(canvas);
 	initMouseEvents(canvas);
-	shaderProgramParams = initShaders();
+	initShaders();
 	loadTextures();
 	loadMeshes();
 
@@ -73,7 +73,7 @@ function initShaders() {
 	// let's initialize the shaders and the linked program
 	const shaderProgram = initShaderProgram("vshader-simple", "fshader-simple");
 
-	return {
+	shaderProgramParams = {
 		program: shaderProgram,
 
 		vertexPosition: gl.getAttribLocation(shaderProgram, 'aVertexPosition'),

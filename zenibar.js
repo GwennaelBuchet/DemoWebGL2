@@ -1,15 +1,67 @@
+let gl;
+let meshes = [];
+let textures = [];
+
 function main() {
 	const canvas = document.getElementById("scene");
-	const gl = canvas.getContext("webgl2");
+	initGL(canvas);
+	const shaderProgramParams = initShaders();
+	loadTextures();
+	initMeshes();
+
+
+	// Mouse interaction
+	canvas.addEventListener("mousedown", mouseDown, false);
+	canvas.addEventListener("mouseup", mouseUp, false);
+	canvas.addEventListener("mouseout", mouseUp, false);
+	canvas.addEventListener("mousemove", mouseMove, false);
+
+
+	// set the geometry definition
+
+	let meshBottle;
+
+
+	loadObjFile("assets/Bottle/12178_bottle_v1_L2.obj")
+		.then(result => {
+			      meshBottle = createBufferFromData(result,
+			                                        {translation: [0, 0, -20], rotation: [0, 0, 0], scale: [1, 1, 1]});
+			      requestAnimationFrame(render);
+		      }, error => alert(error)
+		);
+
+	// let's render.
+	// As it's now animated, we use the requestAnimationFrame function to smooth it up
+	function render() {
+		drawScene(shaderProgramParams, meshes);
+
+		requestAnimationFrame(render);
+	}
+
+}
+
+/**
+ * Initialize the WebGL2 context into the main "gl" variable
+ * @param canvas {HTMLElement}
+ */
+function initGL(canvas) {
+	gl = canvas.getContext("webgl2");
 
 	if (!gl) {
 		canvas.style.display = "none";
 		document.getElementById("noContextLayer").style.display = "block";
 	}
-	// let's initialize the shaders and the linked program
-	const shaderProgram = initShaderProgram(gl, "vshader-simple", "fshader-simple");
+}
 
-	const shaderProgramParams = {
+/**
+ * initialize all shader programs
+ * @returns {{program: WebGLProgram, vertexPosition: GLint, vertexNormal: GLint, textureCoord: GLint, vertexColor: GLint, projectionMatrix: WebGLUniformLocation, modelViewMatrix: WebGLUniformLocation, normalMatrix: WebGLUniformLocation, uSampler: WebGLUniformLocation}}
+ */
+function initShaders() {
+	// let's initialize the shaders and the linked program
+	const shaderProgram = initShaderProgram("vshader-simple", "fshader-simple");
+
+	return {
 		program: shaderProgram,
 
 		vertexPosition: gl.getAttribLocation(shaderProgram, 'aVertexPosition'),
@@ -22,30 +74,45 @@ function main() {
 		normalMatrix: gl.getUniformLocation(shaderProgram, 'uNormalMatrix'),
 		uSampler: gl.getUniformLocation(shaderProgram, 'uSampler')
 	};
-
-
-	// set the geometry definition
-	const gridBuffers = initGridBuffers(gl);
-	let meshBottle;
-
-	const texture1 = loadTexture(gl, "assets/biere-mousse-carre.jpg");
-	const texture2 = loadTexture(gl, "assets/biere2.jpg");
-	loadObjFile("assets/Bottle/12178_bottle_v1_L2.obj")
-		.then(result => {
-			      meshBottle = createBufferFromData(gl, result);
-			      requestAnimationFrame(render);
-		      }, error => alert(error)
-		);
-
-	// let's render.
-	// As it's now animated, we use the requestAnimationFrame function to smooth it up
-	function render() {
-		drawScene(gl, shaderProgramParams, gridBuffers, texture2, texture1);
-
-		requestAnimationFrame(render);
-	}
-
 }
+
+function initMeshes() {
+	const gridBuffers = initGridBuffers();
+
+	meshes[0] = gridBuffers;
+}
+
+function loadTextures() {
+	textures[0] = loadTexture("assets/biere-mousse-carre.jpg");
+	textures[1] = loadTexture("assets/biere2.jpg");
+}
+
+let drag = false;
+let old_x, old_y;
+let dX = 0, dY = 0;
+
+let mouseDown = function (e) {
+	drag = true;
+	old_x = e.pageX;
+	old_y = e.pageY;
+	e.preventDefault();
+	return false;
+};
+
+let mouseUp = function (e) {
+	drag = false;
+};
+
+let mouseMove = function (e) {
+	if (!drag) {
+		return false;
+	}
+	dX = (e.pageX - old_x);// * 2 * Math.PI / canvas.width;
+	dY = (e.pageY - old_y);// * 2 * Math.PI / canvas.height;
+	old_x = e.pageX;
+	old_y = e.pageY;
+	e.preventDefault();
+};
 
 function loadObjFile(url) {
 
@@ -66,7 +133,7 @@ function loadObjFile(url) {
 	});
 }
 
-function createBufferFromData(gl, data) {
+function createBufferFromData(data, srt) {
 
 	// Buffer for the cube's vertices positions.
 	const positionsBuffer = gl.createBuffer();
@@ -103,26 +170,25 @@ function createBufferFromData(gl, data) {
 	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indicesBuffer);
 	gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(data.indices), gl.STATIC_DRAW);
 
-	/**
-	 * Actually, the mesh object (data) already embeds buffers, but for the demo I'd prefer spread the buffers
-	 */
 	return {
 		verticesBuffer: positionsBuffer,
 		textureCoordsBuffer: textureCoordsBuffer,
 		colorsBuffer: colorsBuffer,
 		normalsBuffer: normalsBuffer,
 		indicesBuffer: indicesBuffer,
-		data: data
+		data: data,
+		translation: srt.translation,
+		rotation: srt.rotation,
+		scale: srt.scale
 	};
 
 }
 
 /**
  * Initialize the buffers for the Cube we'll display
- * @param gl {WebGLRenderingContext}
  * @returns {{position: WebGLBuffer, textureCoord: WebGLBuffer, normal: WebGLBuffer, indices: WebGLBuffer}}
  */
-function initGridBuffers(gl) {
+function initGridBuffers() {
 
 	// Define the position for each vertex of each face
 	let positions = [];
@@ -167,22 +233,27 @@ function initGridBuffers(gl) {
 	}
 
 
-	return createBufferFromData(gl, {
-		vertices: positions,
-		textures: textureCoordinates,
-		colors: colors,
-		normals: normals,
-		indices: indices
-	});
+	return createBufferFromData({
+		                            vertices: positions,
+		                            textures: textureCoordinates,
+		                            colors: colors,
+		                            normals: normals,
+		                            indices: indices
+	                            },
+	                            {
+		                            translation: [0, 0, -20],
+		                            rotation: [0.1, 0, 0],
+		                            scale: [1, 1, 1]
+	                            }
+	);
 }
 
 /**
  *
- * @param gl {WebGLRenderingContext}
  * @param url {String}
  * @returns {WebGLTexture}
  */
-function loadTexture(gl, url) {
+function loadTexture(url) {
 	const texture = gl.createTexture();
 	gl.bindTexture(gl.TEXTURE_2D, texture);
 
@@ -219,11 +290,10 @@ let time = 0.0;
 
 /**
  * Render the scene
- * @param gl {WebGLRenderingContext}
  * @param shaderProgramParams {}
- * @param mesh
+ * @param meshes
  */
-function drawScene(gl, shaderProgramParams, mesh, texture1, texture2) {
+function drawScene(shaderProgramParams, meshes) {
 
 	// Clear the color buffer
 	gl.clearColor(0.0, 0.0, 0.0, 1);
@@ -247,32 +317,36 @@ function drawScene(gl, shaderProgramParams, mesh, texture1, texture2) {
 	                 zNear,
 	                 zFar);
 
-	drawMesh(gl, projectionMatrix, shaderProgramParams, mesh, texture1, [0.0, 0.0, -30.0], [0.1, 0, 0]);
-	//drawMesh(gl, projectionMatrix, shaderProgramParams, mesh, texture1, [0.0, 0.0, -20.0], [0, -1 * time, 0.5]);
-	//drawMesh(gl, projectionMatrix, shaderProgramParams, buffers, texture2, [3, 0.0, -15.0], [0, 1 * time, 0.5 * time]);
+	for (let mesh of meshes) {
+		drawMesh(projectionMatrix, shaderProgramParams, mesh, textures[0]);
+	}
 
 	time += 0.01;
 }
 
-function drawMesh(gl, projectionMatrix, shaderProgramParams, mesh, texture, translation, rotation) {
+function drawMesh(projectionMatrix, shaderProgramParams, mesh, texture) {
 	let modelViewMatrix = mat4.create();
 	mat4.translate(modelViewMatrix,     // destination matrix
 	               modelViewMatrix,     // matrix to translate
-	               translation);        // amount to translate
+	               mesh.translation);        // amount to translate
 
 	//let's rotate the global view
 	mat4.rotate(modelViewMatrix,    // destination matrix
 	            modelViewMatrix,    // matrix to rotate
-	            rotation[0],        // amount to rotate in radians
+	            mesh.rotation[0],        // amount to rotate in radians
 	            [1, 0, 0]);         // axis to rotate around (X)
 	mat4.rotate(modelViewMatrix,    // destination matrix
 	            modelViewMatrix,    // matrix to rotate
-	            rotation[1],        // amount to rotate in radians
+	            mesh.rotation[1],        // amount to rotate in radians
 	            [0, 1, 0]);         // axis to rotate around (Y)
 	mat4.rotate(modelViewMatrix,    // destination matrix
 	            modelViewMatrix,    // matrix to rotate
-	            rotation[2],        // amount to rotate in radians
+	            mesh.rotation[2],        // amount to rotate in radians
 	            [0, 0, 1]);         // axis to rotate around (Z)
+
+	mat4.scale(modelViewMatrix,
+	           modelViewMatrix,
+	           mesh.scale);
 
 	const normalMatrix = mat4.create();
 	mat4.invert(normalMatrix, modelViewMatrix);
@@ -370,29 +444,27 @@ function drawMesh(gl, projectionMatrix, shaderProgramParams, mesh, texture, tran
 
 /**
  * Initialize Vertex and Fragment shaders + "linked" program
- * @param gl {WebGLRenderingContext}
  * @param vertexShaderSrcID {String}
  * @param fragmentShaderSrcID {String}
  * @returns {WebGLProgram}
  * */
-function initShaderProgram(gl, vertexShaderSrcID, fragmentShaderSrcID) {
+function initShaderProgram(vertexShaderSrcID, fragmentShaderSrcID) {
 	let vertexShaderSource = document.getElementById(vertexShaderSrcID).text;
 	let fragmentShaderSource = document.getElementById(fragmentShaderSrcID).text;
 
-	let vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
-	let fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
+	let vertexShader = createShader(gl.VERTEX_SHADER, vertexShaderSource);
+	let fragmentShader = createShader(gl.FRAGMENT_SHADER, fragmentShaderSource);
 
-	return createProgram(gl, vertexShader, fragmentShader);
+	return createProgram(vertexShader, fragmentShader);
 }
 
 /**
  * Load a "shader" script into a shader object (WebGLShader)
- * @param gl {WebGLRenderingContext}
  * @param type {number} gl.VERTEX_SHADER or gl.FRAGMENT_SHADER
  * @param source {String} source code for the shader
  * @returns {WebGLShader}
  */
-function createShader(gl, type, source) {
+function createShader(type, source) {
 	let shader = gl.createShader(type);
 	gl.shaderSource(shader, source);
 	gl.compileShader(shader);
@@ -408,12 +480,11 @@ function createShader(gl, type, source) {
 
 /**
  * Link both Vertex and Fragment shaders into a "Program" (WebGLProgram)
- * @param gl {WebGLRenderingContext}
  * @param vertexShader {WebGLShader}
  * @param fragmentShader {WebGLShader}
  * @returns {WebGLProgram}
  */
-function createProgram(gl, vertexShader, fragmentShader) {
+function createProgram(vertexShader, fragmentShader) {
 	let program = gl.createProgram();
 	gl.attachShader(program, vertexShader);
 	gl.attachShader(program, fragmentShader);

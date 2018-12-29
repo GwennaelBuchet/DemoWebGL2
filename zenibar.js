@@ -38,6 +38,8 @@ function initMouseEvents(canvas) {
 	canvas.addEventListener("mouseup", handleMouseUp, false);
 	canvas.addEventListener("mouseout", handleMouseUp, false);
 	canvas.addEventListener("mousemove", handleMouseMove, false);
+	canvas.addEventListener("mousewheel", handleMouseWheel, false);
+	canvas.addEventListener("DOMMouseScroll", handleMouseWheel, false);
 }
 
 let mouseDown = false;
@@ -77,6 +79,17 @@ function handleMouseMove(event) {
 
 	lastMouseX = newX;
 	lastMouseY = newY;
+
+	return false;
+}
+
+function handleMouseWheel(event) {
+
+    mat4.translate(globalSceneViewMatrix, globalSceneViewMatrix, [event.deltaX/30., 0, event.deltaY/30.]);
+
+    event.preventDefault();
+
+	return false;
 }
 
 function degToRad(degrees) {
@@ -555,8 +568,11 @@ function initCubeBuffers() {
 function drawMesh(projectionMatrix, shaderProgramParams, elt) {
 	let modelViewMatrix = mat4.create();
 
+	let worldMatrix = mat4.create();
+	mat4.invert(worldMatrix, globalSceneViewMatrix);
 
-	mat4.multiply(modelViewMatrix, modelViewMatrix, globalSceneViewMatrix);
+	mat4.multiply(modelViewMatrix, modelViewMatrix, worldMatrix);
+
 
 	mat4.translate(modelViewMatrix,     // destination matrix
 	               modelViewMatrix,     // matrix to translate

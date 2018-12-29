@@ -27,6 +27,10 @@ in vec4 aVertexColor;
 uniform mat4 uNormalMatrix;
 uniform mat4 uModelViewMatrix;
 uniform mat4 uProjectionMatrix;
+uniform bool uUseLight;
+uniform vec3 uAmbientColor;
+uniform vec3 uLightDirection;
+uniform vec3 uLightColor;
 
 out vec2 vTextureCoord;
 out vec4 vVertexColor;
@@ -37,14 +41,15 @@ void main(void) {
   vTextureCoord = aTextureCoord;
   vVertexColor = aVertexColor;
 
-  highp vec3 ambientLight = vec3(0.4, 0.4, 0.4);
-  highp vec3 directionalLightColor = vec3(1, 1, 1);
-  highp vec3 directionalVector = normalize(vec3(20, 50, 0));
-  highp vec4 transformedNormal = uNormalMatrix * vec4(aVertexNormal, 1.0);
-  highp float directional = max(dot(transformedNormal.xyz, directionalVector), 0.0);
+    if (!uUseLight) {
+        vLighting = vec3(1.0, 1.0, 1.0);
+    }
+    else {
+        highp vec4 transformedNormal = uNormalMatrix * vec4(aVertexNormal, 1.0);
+        highp float directional = max(dot(transformedNormal.xyz, uLightDirection), 0.0);
 
-  vLighting = (ambientLight + (directionalLightColor * directional));
-
+        vLighting = uAmbientColor + (uLightColor * directional);
+  }
 }
 
 </script>

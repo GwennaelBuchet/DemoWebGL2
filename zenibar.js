@@ -7,7 +7,7 @@ let scene = [];
 function main() {
 	const canvas = document.getElementById("scene");
 	initGL(canvas);
-	initMouseEvents(canvas);
+	initEvents(canvas);
 	initShaders();
 	loadTextures();
 	loadScene();
@@ -26,13 +26,16 @@ function initGL(canvas) {
 		canvas.style.display = "none";
 		document.getElementById("noContextLayer").style.display = "block";
 	}
+	else {
+		drawMode = gl.TRIANGLES;
+	}
 }
 
 /**
- * Initialize mouse events to move the scene view
+ * Initialize mouse and keyboard events to move the scene view
  * @param canvas
  */
-function initMouseEvents(canvas) {
+function initEvents(canvas) {
 	// Mouse interaction
 	canvas.addEventListener("mousedown", handleMouseDown, false);
 	canvas.addEventListener("mouseup", handleMouseUp, false);
@@ -40,6 +43,8 @@ function initMouseEvents(canvas) {
 	canvas.addEventListener("mousemove", handleMouseMove, false);
 	canvas.addEventListener("mousewheel", handleMouseWheel, false);
 	canvas.addEventListener("DOMMouseScroll", handleMouseWheel, false);
+
+	document.addEventListener( "keydown", handleKeyDown, true);
 }
 
 let mouseDown = false;
@@ -92,6 +97,23 @@ function handleMouseWheel(event) {
 	return false;
 }
 
+function handleKeyDown(event) {
+	if (event.key === "l" || event.key === "L") {
+		useLight = !useLight;
+	}
+
+	else if (event.key === "w" || event.key === "W") {
+		drawMode = gl.LINES;
+	}
+	else if (event.key === "t" || event.key === "T") {
+		drawMode = gl.TRIANGLES;
+	}
+	else if (event.key === "p" || event.key === "P") {
+		drawMode = gl.POINTS;
+	}
+
+}
+
 function degToRad(degrees) {
 	return degrees * Math.PI / 180;
 }
@@ -117,7 +139,11 @@ function initShaders() {
 		normalMatrix: gl.getUniformLocation(shaderProgram, 'uNormalMatrix'),
 
 		uSampler: gl.getUniformLocation(shaderProgram, 'uSampler'),
-		useTexture: gl.getUniformLocation(shaderProgram, "uUseTexture")
+		useTexture: gl.getUniformLocation(shaderProgram, "uUseTexture"),
+		useLight: gl.getUniformLocation(shaderProgram, "uUseLight"),
+		ambientColor: gl.getUniformLocation(shaderProgram, "uAmbientColor"),
+		lightDirection: gl.getUniformLocation(shaderProgram, "uLightDirection"),
+		lightColor: gl.getUniformLocation(shaderProgram, "uLightColor"),
 	};
 }
 
@@ -384,7 +410,7 @@ function initGridBuffers() {
 			positions[index + 2] = startZ + h * width; // z
 
 			normals[index + 0] = 0.0; // x
-			normals[index + 1] = Math.random();  //1.0; // y randomize the normal to see the light effect
+			normals[index + 1] = 1.0; // y randomize the normal to see the light effect
 			normals[index + 2] = 0.0; // z
 
 			colors = colors.concat(c);
@@ -565,7 +591,7 @@ function initCubeBuffers() {
 	);
 }
 
-function drawMesh(projectionMatrix, shaderProgramParams, elt) {
+function drawMesh(projectionMatrix, elt) {
 	let modelViewMatrix = mat4.create();
 
 	let worldMatrix = mat4.create();
@@ -682,8 +708,21 @@ function drawMesh(projectionMatrix, shaderProgramParams, elt) {
 		normalMatrix);
 	gl.uniform1i(shaderProgramParams.useTexture, elt.useTexture);
 
+	gl.uniform1i(shaderProgramParams.useLight, useLight);
+	if (useLight) {
+		gl.uniform3f(shaderProgramParams.ambientColor, 0.8, 0.8, 0.8);
+
+		let lightDirection = [-100.0, -100.0, -100.0];
+		let adjustedLD = vec3.create();
+		vec3.normalize(lightDirection, adjustedLD);
+		vec3.scale(adjustedLD, -1);
+		gl.uniform3fv(shaderProgramParams.lightDirection, adjustedLD);
+
+		gl.uniform3f(shaderProgramParams.lightColor, 0.9, 0.9, 0.9);
+	}
+
 	// Let's render
-	gl.drawElements(gl.TRIANGLES,
+	gl.drawElements(drawMode,
 	                elt.mesh.data.indices.length, // count (number of indices)
 	                gl.UNSIGNED_SHORT, // type
 	                0 // offset
@@ -692,6 +731,8 @@ function drawMesh(projectionMatrix, shaderProgramParams, elt) {
 }
 
 let time = 0.0;
+let useLight = true;
+let drawMode = 4;
 
 /**
  * Render the scene
@@ -714,9 +755,8 @@ function drawScene() {
 	                 300 //zFar
 	);
 
-
 	for (let elt of scene) {
-		drawMesh(projectionMatrix, shaderProgramParams, elt);
+		drawMesh(projectionMatrix, elt);
 	}
 
 	time += 0.01;

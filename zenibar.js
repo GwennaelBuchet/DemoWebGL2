@@ -25,7 +25,6 @@ function main() {
 
 
 	// set the geometry definition
-	const cubeBuffers = initCubeBuffers(gl);
 	const gridBuffers = initGridBuffers(gl);
 	let meshBottle;
 
@@ -74,9 +73,11 @@ function createBufferFromData(gl, data) {
 	// Buffer to hold indices into the vertex array for each faces's vertices.
 	const indicesBuffer = gl.createBuffer();
 	// Buffer for normals
-	const normalBuffer = gl.createBuffer();
+	const normalsBuffer = gl.createBuffer();
 	// Buffer for texture coordinates
-	const textureCoordBuffer = gl.createBuffer();
+	let textureCoordsBuffer = undefined;
+	// Buffer for colors
+	let colorsBuffer = undefined;
 
 
 	// Bind to the positionsBuffer
@@ -84,12 +85,20 @@ function createBufferFromData(gl, data) {
 	// Fill the buffer with vertices positions
 	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data.vertices), gl.STATIC_DRAW);
 
+	if (data.textures !== undefined && data.textures !== null) {
+		textureCoordsBuffer = gl.createBuffer();
+		gl.bindBuffer(gl.ARRAY_BUFFER, textureCoordsBuffer);
+		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data.textures), gl.STATIC_DRAW);
+	}
 
-	gl.bindBuffer(gl.ARRAY_BUFFER, textureCoordBuffer);
-	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data.textures), gl.STATIC_DRAW);
+	if (data.colors !== undefined && data.colors !== null) {
+		colorsBuffer = gl.createBuffer();
+		gl.bindBuffer(gl.ARRAY_BUFFER, colorsBuffer);
+		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data.colors), gl.STATIC_DRAW);
+	}
 
-	gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
-	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data.vertexNormals), gl.STATIC_DRAW);
+	gl.bindBuffer(gl.ARRAY_BUFFER, normalsBuffer);
+	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data.normals), gl.STATIC_DRAW);
 
 	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indicesBuffer);
 	gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(data.indices), gl.STATIC_DRAW);
@@ -99,184 +108,13 @@ function createBufferFromData(gl, data) {
 	 */
 	return {
 		verticesBuffer: positionsBuffer,
-		textureCoordBuffer: textureCoordBuffer,
-		normalsBuffer: normalBuffer,
+		textureCoordsBuffer: textureCoordsBuffer,
+		colorsBuffer: colorsBuffer,
+		normalsBuffer: normalsBuffer,
 		indicesBuffer: indicesBuffer,
-		mesh: data
+		data: data
 	};
 
-}
-
-/**
- * Initialize the buffers for the Cube we'll display
- * @param gl {WebGLRenderingContext}
- * @returns {{position: WebGLBuffer, textureCoord: WebGLBuffer, normal: WebGLBuffer, indices: WebGLBuffer}}
- */
-function initCubeBuffers(gl) {
-
-	// Buffer for the cube's vertices positions.
-	const positionsBuffer = gl.createBuffer();
-	// Buffer to hold indices into the vertex array for each faces's vertices.
-	const indicesBuffer = gl.createBuffer();
-	// Buffer for normals
-	const normalBuffer = gl.createBuffer();
-	// Buffer for texture coordinates
-	const textureCoordBuffer = gl.createBuffer();
-
-
-	// Positions
-	{
-		// Define the position for each vertex of each face
-		const positions = [
-			// Front
-			-1.0, -1.0, 1.0, //x, y, z
-			1.0, -1.0, 1.0,
-			1.0, 1.0, 1.0,
-			-1.0, 1.0, 1.0,
-
-			// Back
-			-1.0, -1.0, -1.0,
-			-1.0, 1.0, -1.0,
-			1.0, 1.0, -1.0,
-			1.0, -1.0, -1.0,
-
-			// Top
-			-1.0, 1.0, -1.0,
-			-1.0, 1.0, 1.0,
-			1.0, 1.0, 1.0,
-			1.0, 1.0, -1.0,
-
-			// Bottom
-			-1.0, -1.0, -1.0,
-			1.0, -1.0, -1.0,
-			1.0, -1.0, 1.0,
-			-1.0, -1.0, 1.0,
-
-			// Right
-			1.0, -1.0, -1.0,
-			1.0, 1.0, -1.0,
-			1.0, 1.0, 1.0,
-			1.0, -1.0, 1.0,
-
-			// Left
-			-1.0, -1.0, -1.0,
-			-1.0, -1.0, 1.0,
-			-1.0, 1.0, 1.0,
-			-1.0, 1.0, -1.0
-		];
-
-		// Bind to the positionsBuffer
-		gl.bindBuffer(gl.ARRAY_BUFFER, positionsBuffer);
-		// Fill the buffer with vertices positions
-		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
-	}
-
-	// Texture coordinates
-	{
-		gl.bindBuffer(gl.ARRAY_BUFFER, textureCoordBuffer);
-		const textureCoordinates = [
-			// Front
-			0.0, 0.0,
-			1.0, 0.0,
-			1.0, 1.0,
-			0.0, 1.0,
-			// Back
-			0.0, 0.0,
-			1.0, 0.0,
-			1.0, 1.0,
-			0.0, 1.0,
-			// Top
-			0.0, 0.0,
-			1.0, 0.0,
-			1.0, 1.0,
-			0.0, 1.0,
-			// Bottom
-			0.0, 0.0,
-			1.0, 0.0,
-			1.0, 1.0,
-			0.0, 1.0,
-			// Right
-			0.0, 0.0,
-			1.0, 0.0,
-			1.0, 1.0,
-			0.0, 1.0,
-			// Left
-			0.0, 0.0,
-			1.0, 0.0,
-			1.0, 1.0,
-			0.0, 1.0,
-		];
-
-		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(textureCoordinates), gl.STATIC_DRAW);
-	}
-
-	// Normals
-	{
-		gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
-
-		const vertexNormals = [
-			// Front
-			0.0, 0.0, 1.0,
-			0.0, 0.0, 1.0,
-			0.0, 0.0, 1.0,
-			0.0, 0.0, 1.0,
-
-			// Back
-			0.0, 0.0, -1.0,
-			0.0, 0.0, -1.0,
-			0.0, 0.0, -1.0,
-			0.0, 0.0, -1.0,
-
-			// Top
-			0.0, 1.0, 0.0,
-			0.0, 1.0, 0.0,
-			0.0, 1.0, 0.0,
-			0.0, 1.0, 0.0,
-
-			// Bottom
-			0.0, -1.0, 0.0,
-			0.0, -1.0, 0.0,
-			0.0, -1.0, 0.0,
-			0.0, -1.0, 0.0,
-
-			// Right
-			1.0, 0.0, 0.0,
-			1.0, 0.0, 0.0,
-			1.0, 0.0, 0.0,
-			1.0, 0.0, 0.0,
-
-			// Left
-			-1.0, 0.0, 0.0,
-			-1.0, 0.0, 0.0,
-			-1.0, 0.0, 0.0,
-			-1.0, 0.0, 0.0
-		];
-
-		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertexNormals), gl.STATIC_DRAW);
-	}
-
-	// Indices
-	{
-		// indices of vertices for each face
-		const indices = [
-			0, 1, 2, 0, 2, 3,         // front
-			4, 5, 6, 4, 6, 7,         // back
-			8, 9, 10, 8, 10, 11,      // top
-			12, 13, 14, 12, 14, 15,   // bottom
-			16, 17, 18, 16, 18, 19,   // right
-			20, 21, 22, 20, 22, 23,   // left
-		];
-
-		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indicesBuffer);
-		gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
-	}
-
-	return {
-		positions: positionsBuffer,
-		textureCoord: textureCoordBuffer,
-		normals: normalBuffer,
-		indices: indicesBuffer
-	};
 }
 
 /**
@@ -286,21 +124,9 @@ function initCubeBuffers(gl) {
  */
 function initGridBuffers(gl) {
 
-	// Buffer for the cube's vertices positions.
-	const positionsBuffer = gl.createBuffer();
-	// Buffer to hold indices into the vertex array for each faces's vertices.
-	const indicesBuffer = gl.createBuffer();
-	// Buffer for normals
-	const normalBuffer = gl.createBuffer();
-	// Buffer for colors of each vertex of each face
-	const colorsBuffer = gl.createBuffer();
-	// Buffer for texture coordinates
-	const textureCoordBuffer = gl.createBuffer();
-
-
 	// Define the position for each vertex of each face
 	let positions = [];
-	let vertexNormals = [];
+	let normals = [];
 	let indices = [];
 	let colors = [];
 	let textureCoordinates = [];
@@ -321,19 +147,18 @@ function initGridBuffers(gl) {
 			positions[index + 1] = startY; // y
 			positions[index + 2] = startZ + h * width; // z
 
-			vertexNormals[index + 0] = 0.0; // x
-			vertexNormals[index + 1] = Math.random();  //1.0; // y randomize the normal to see the light effect
-			vertexNormals[index + 2] = 0.0; // z
+			normals[index + 0] = 0.0; // x
+			normals[index + 1] = Math.random();  //1.0; // y randomize the normal to see the light effect
+			normals[index + 2] = 0.0; // z
 
 			colors = colors.concat(c);
 
 			textureCoordinates = textureCoordinates.concat(w / nbW, h / nbH); // u, v
 
-
 			// Each square of the grid is composed by 2 triangles.
 			// Each triangle is composed with 3 vertices. "indices" stores the indices in the "positions" array of these vertices, counter-clock wise.
 			if (w < nbW && h < nbH) {
-				let i = w + (h * (nbW+1));
+				let i = w + (h * (nbW + 1));
 				indices = indices.concat(i, i + nbW + 1, i + nbW + 2); // 1st triangle of the square
 				indices = indices.concat(i, i + nbW + 2, i + 1); // 2nd triangle of the square
 			}
@@ -341,29 +166,14 @@ function initGridBuffers(gl) {
 		}
 	}
 
-	gl.bindBuffer(gl.ARRAY_BUFFER, positionsBuffer);
-	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
 
-	gl.bindBuffer(gl.ARRAY_BUFFER, colorsBuffer);
-	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
-
-	gl.bindBuffer(gl.ARRAY_BUFFER, textureCoordBuffer);
-	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(textureCoordinates), gl.STATIC_DRAW);
-
-	gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
-	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertexNormals), gl.STATIC_DRAW);
-
-	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indicesBuffer);
-	gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
-
-	return {
-		verticesBuffer: positionsBuffer,
-		textureCoordBuffer: textureCoordBuffer,
-		colorsBuffer: colorsBuffer,
-		normalsBuffer: normalBuffer,
-		indicesBuffer: indicesBuffer,
-		count: indices.length
-	};
+	return createBufferFromData(gl, {
+		vertices: positions,
+		textures: textureCoordinates,
+		colors: colors,
+		normals: normals,
+		indices: indices
+	});
 }
 
 /**
@@ -469,56 +279,64 @@ function drawMesh(gl, projectionMatrix, shaderProgramParams, mesh, texture, tran
 	mat4.transpose(normalMatrix, normalMatrix);
 
 	// Set the vertexPosition attribute of the shader
-	gl.bindBuffer(gl.ARRAY_BUFFER, mesh.verticesBuffer);
-	gl.vertexAttribPointer(
-		shaderProgramParams.vertexPosition,
-		3,      // size : X,Y,Z = 3 values
-		gl.FLOAT,       // type
-		false, // normalized
-		0,      // stride
-		0       // offset
-	);
-	gl.enableVertexAttribArray(shaderProgramParams.vertexPosition);
+	{
+		gl.bindBuffer(gl.ARRAY_BUFFER, mesh.verticesBuffer);
+		gl.vertexAttribPointer(
+			shaderProgramParams.vertexPosition,
+			3,      // size : X,Y,Z = 3 values
+			gl.FLOAT,       // type
+			false, // normalized
+			0,      // stride
+			0       // offset
+		);
+		gl.enableVertexAttribArray(shaderProgramParams.vertexPosition);
+	}
 
 	//Set the texture coordinates
-	gl.bindBuffer(gl.ARRAY_BUFFER, mesh.textureCoordBuffer);
-	gl.vertexAttribPointer(
-		shaderProgramParams.textureCoord,
-		2, // size : U,V = 2 values
-		gl.FLOAT, // type
-		false, //normalized
-		0, // stride
-		0 // offset
-	);
-	gl.enableVertexAttribArray(shaderProgramParams.textureCoord);
-	// Tell WebGL we want to affect texture unit 0
-	gl.activeTexture(gl.TEXTURE0);
-	// Bind the texture to texture unit 0
-	gl.bindTexture(gl.TEXTURE_2D, texture);
+	{
+		gl.bindBuffer(gl.ARRAY_BUFFER, mesh.textureCoordsBuffer);
+		gl.vertexAttribPointer(
+			shaderProgramParams.textureCoord,
+			2, // size : U,V = 2 values
+			gl.FLOAT, // type
+			false, //normalized
+			0, // stride
+			0 // offset
+		);
+		gl.enableVertexAttribArray(shaderProgramParams.textureCoord);
+		// Tell WebGL we want to affect texture unit 0
+		gl.activeTexture(gl.TEXTURE0);
+		// Bind the texture to texture unit 0
+		gl.bindTexture(gl.TEXTURE_2D, texture);
+	}
 
 	// Set the vertexColor attribute of the shader
-	gl.bindBuffer(gl.ARRAY_BUFFER, mesh.colorsBuffer);
-	gl.vertexAttribPointer(
-		shaderProgramParams.vertexColor,
-		4, // size : R,G,B,A = 4 values
-		gl.FLOAT, // type
-		false, // normalized
-		0, // stride
-		0 // offset
-	);
-	gl.enableVertexAttribArray(shaderProgramParams.vertexColor);
+	{
+		gl.bindBuffer(gl.ARRAY_BUFFER, mesh.colorsBuffer);
+		gl.vertexAttribPointer(
+			shaderProgramParams.vertexColor,
+			4, // size : R,G,B,A = 4 values
+			gl.FLOAT, // type
+			false, // normalized
+			0, // stride
+			0 // offset
+		);
+		gl.enableVertexAttribArray(shaderProgramParams.vertexColor);
+	}
 
 	// Normals
-	gl.bindBuffer(gl.ARRAY_BUFFER, mesh.normalsBuffer);
-	gl.vertexAttribPointer(
-		shaderProgramParams.vertexNormal,
-		3, // size : X,Y,Z = 3 values
-		gl.FLOAT, // type
-		false, // normalized
-		0, //stride
-		0 //offste
-	);
-	gl.enableVertexAttribArray(shaderProgramParams.vertexNormal);
+	{
+		gl.bindBuffer(gl.ARRAY_BUFFER, mesh.normalsBuffer);
+		gl.vertexAttribPointer(
+			shaderProgramParams.vertexNormal,
+			3, // size : X,Y,Z = 3 values
+			gl.FLOAT, // type
+			false, // normalized
+			0, //stride
+			0 //offste
+		);
+		gl.enableVertexAttribArray(shaderProgramParams.vertexNormal);
+	}
 
 
 	// Set indices to use to index the vertices
@@ -543,7 +361,7 @@ function drawMesh(gl, projectionMatrix, shaderProgramParams, mesh, texture, tran
 
 	// Let's render
 	gl.drawElements(gl.TRIANGLES,
-	                mesh.count, //mesh.vertices.length, // count (number of vertices)
+	                mesh.data.indices.length, // count (number of indices)
 	                gl.UNSIGNED_SHORT, // type
 	                0 // offset
 	);

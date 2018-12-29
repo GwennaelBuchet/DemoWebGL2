@@ -1,25 +1,17 @@
 let gl;
 let meshes = [];
 let textures = [];
+let shaderProgramParams;
 
 function main() {
 	const canvas = document.getElementById("scene");
 	initGL(canvas);
 	initMouseEvents(canvas);
-	const shaderProgramParams = initShaders();
+	shaderProgramParams = initShaders();
 	loadTextures();
 	loadMeshes();
 
-	render();
-
-	// let's render.
-	// As it's now animated, we use the requestAnimationFrame function to smooth it up
-	function render() {
-		drawScene(shaderProgramParams, meshes);
-
-		requestAnimationFrame(render);
-	}
-
+	drawScene();
 }
 
 /**
@@ -352,45 +344,6 @@ function initGridBuffers() {
 	);
 }
 
-
-let time = 0.0;
-
-/**
- * Render the scene
- * @param shaderProgramParams {}
- * @param meshes
- */
-function drawScene(shaderProgramParams, meshes) {
-
-	// Clear the color buffer
-	gl.clearColor(0.0, 0.0, 0.0, 1);
-	gl.clearDepth(1.0);
-	gl.enable(gl.DEPTH_TEST);
-	gl.depthFunc(gl.LEQUAL);
-
-	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-
-	const fieldOfView = 45 * Math.PI / 180;   // in radians
-	const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
-	//define the field of view / deepness
-	const zNear = 0.1;
-	const zFar = 100.0;
-
-	const projectionMatrix = mat4.create();
-	mat4.perspective(projectionMatrix,
-	                 fieldOfView,
-	                 aspect,
-	                 zNear,
-	                 zFar);
-
-	for (let mesh of meshes) {
-		drawMesh(projectionMatrix, shaderProgramParams, mesh);
-	}
-
-	time += 0.01;
-}
-
 function drawMesh(projectionMatrix, shaderProgramParams, mesh) {
 	let modelViewMatrix = mat4.create();
 	mat4.translate(modelViewMatrix,     // destination matrix
@@ -507,6 +460,45 @@ function drawMesh(projectionMatrix, shaderProgramParams, mesh) {
 	                gl.UNSIGNED_SHORT, // type
 	                0 // offset
 	);
+}
+
+let time = 0.0;
+
+/**
+ * Render the scene
+ */
+function drawScene() {
+
+	// Clear the color buffer
+	gl.clearColor(0.0, 0.0, 0.0, 1);
+	gl.clearDepth(1.0);
+	gl.enable(gl.DEPTH_TEST);
+	gl.depthFunc(gl.LEQUAL);
+
+	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+
+	const fieldOfView = 45 * Math.PI / 180;   // in radians
+	const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
+	//define the field of view / deepness
+	const zNear = 0.1;
+	const zFar = 100.0;
+
+	const projectionMatrix = mat4.create();
+	mat4.perspective(projectionMatrix,
+	                 fieldOfView,
+	                 aspect,
+	                 zNear,
+	                 zFar);
+
+	for (let mesh of meshes) {
+		drawMesh(projectionMatrix, shaderProgramParams, mesh);
+	}
+
+	time += 0.01;
+
+
+	requestAnimationFrame(drawScene);
 }
 
 

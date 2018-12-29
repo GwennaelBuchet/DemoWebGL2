@@ -194,13 +194,16 @@ function loadTexture(url) {
 function loadScene() {
 	loadMeshes();
 
+	//todo : grille 3D de cubes
+	//todo : animer la grille (Y des vertices)
+
 	let eltGrid = {
 		mesh: meshes[0], // grid mesh
 		translation: [0, 0, -20],
 		rotation: [.1, 0, 0],
 		scale: [1, 1, 1],
-		texture: null,
-		useTexture: 0
+		texture: textures[1],
+		useTexture: true
 	};
 	scene.push(eltGrid);
 
@@ -209,8 +212,8 @@ function loadScene() {
 		translation: [-5, 1, -20],
 		rotation: [.1, 0.1, 0],
 		scale: [1, 1, 1],
-		texture: null,
-		useTexture: 0
+		texture: textures[0],
+		useTexture: true
 	};
 	scene.push(eltCube1);
 
@@ -220,7 +223,7 @@ function loadScene() {
 		rotation: [.1, 1, 0],
 		scale: [1, 1, 1],
 		texture: textures[1],
-		useTexture: 0
+		useTexture: true
 	};
 	scene.push(eltCube2);
 }
@@ -233,35 +236,23 @@ function loadMeshes() {
 
 	meshes.push(initCubeBuffers());
 
-	/*loadObjFile("assets/Bottle/12178_bottle_v1_L2.obj")
+	loadObjFile("assets/Bottle/12178_bottle_v1_L2.obj")
 		.then(result => {
-			      meshes.push(createBufferFromData(result,
-			                                       {translation: [0, 0, -20], rotation: [0, 0, 0], scale: [1, 1, 1]},
-			                                       textures[0]
-			                  )
-			      );
+			      let bottle = createBufferFromData(result);
+			      meshes.push(bottle);
+			      let eltBottle = {
+				      mesh: bottle,
+				      translation: [0, 1, -20],
+				      rotation: [-Math.PI/2., 0, 0],
+				      scale: [0.1, 0.1, 0.1],
+				      texture: textures[1],
+				      useTexture: true
+			      };
+			      scene.push(eltBottle);
 		      }, error => alert(error)
-		);*/
+		);
 }
 
-function loadObjFile(url) {
-
-	return new Promise((resolve, reject) => {
-
-		fetch(url)
-			.then(resp => {
-				return resp.text();
-			})
-			.then(data => {
-				let content = data;
-				let mesh = new OBJ.Mesh(content);
-				resolve(mesh);
-			})
-			.catch(function (error) {
-				reject(JSON.stringify(error));
-			});
-	});
-}
 
 function createBufferFromData(data) {
 
@@ -272,7 +263,7 @@ function createBufferFromData(data) {
 	// Buffer for normals
 	const normalsBuffer = gl.createBuffer();
 	// Buffer for texture coordinates
-	let textureCoordsBuffer = null;
+	let textureCoordsBuffer = gl.createBuffer();
 	// Buffer for colors
 	let colorsBuffer = null;
 
@@ -283,7 +274,6 @@ function createBufferFromData(data) {
 	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data.vertices), gl.STATIC_DRAW);
 
 	//if (data.textures !== undefined && data.textures !== null) {
-	textureCoordsBuffer = gl.createBuffer();
 	gl.bindBuffer(gl.ARRAY_BUFFER, textureCoordsBuffer);
 	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data.textures), gl.STATIC_DRAW);
 	//}
@@ -295,7 +285,7 @@ function createBufferFromData(data) {
 	}
 
 	gl.bindBuffer(gl.ARRAY_BUFFER, normalsBuffer);
-	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data.normals), gl.STATIC_DRAW);
+	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data.vertexNormals), gl.STATIC_DRAW);
 
 	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indicesBuffer);
 	gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(data.indices), gl.STATIC_DRAW);
@@ -312,8 +302,31 @@ function createBufferFromData(data) {
 }
 
 /**
- * Initialize the buffers for the Cube we'll display
- * @returns {{position: WebGLBuffer, textureCoord: WebGLBuffer, normal: WebGLBuffer, indices: WebGLBuffer}}
+ * Load external Obj file
+ * @param url {String}
+ * @returns {Promise<any>}
+ */
+function loadObjFile(url) {
+
+	return new Promise((resolve, reject) => {
+
+		fetch(url)
+			.then(resp => {
+				return resp.text();
+			})
+			.then(data => {
+				let mesh = new OBJ.Mesh(data);
+				resolve(mesh);
+			})
+			.catch(function (error) {
+				reject(JSON.stringify(error));
+			});
+	});
+}
+
+/**
+ * Initialize the buffers for the Grid
+ * @returns {{verticesBuffer, textureCoordsBuffer, colorsBuffer, normalsBuffer, indicesBuffer, data}}
  */
 function initGridBuffers() {
 
@@ -363,7 +376,7 @@ function initGridBuffers() {
 		                            vertices: positions,
 		                            textures: textureCoordinates,
 		                            colors: colors,
-		                            normals: normals,
+		                            vertexNormals: normals,
 		                            indices: indices
 	                            }
 	);
@@ -371,7 +384,7 @@ function initGridBuffers() {
 
 /**
  * Initialize the buffers for the Cube we'll display
- * @returns {{position: WebGLBuffer, textureCoord: WebGLBuffer, indices: WebGLBuffer}}
+ * @returns {{verticesBuffer, textureCoordsBuffer, colorsBuffer, normalsBuffer, indicesBuffer, data}}
  */
 function initCubeBuffers() {
 
@@ -516,7 +529,7 @@ function initCubeBuffers() {
 		                            vertices: positions,
 		                            textures: textureCoordinates,
 		                            colors: colors,
-		                            normals: normals,
+		                            vertexNormals: normals,
 		                            indices: indices
 	                            }
 	);
@@ -565,7 +578,7 @@ function drawMesh(projectionMatrix, shaderProgramParams, elt) {
 	}
 
 	//Set the texture coordinates
-	if (elt.texture !== null && elt.useTexture === 1) {
+	if (elt.texture !== null && elt.useTexture === true) {
 		gl.bindBuffer(gl.ARRAY_BUFFER, elt.mesh.textureCoordsBuffer);
 		gl.vertexAttribPointer(
 			shaderProgramParams.textureCoord,
@@ -583,7 +596,7 @@ function drawMesh(projectionMatrix, shaderProgramParams, elt) {
 	}
 
 	// Set the vertexColor attribute of the shader
-	{
+	/*if (elt.mesh.colorsBuffer !== undefined && elt.mesh.colorsBuffer !== null) {
 		gl.bindBuffer(gl.ARRAY_BUFFER, elt.mesh.colorsBuffer);
 		gl.vertexAttribPointer(
 			shaderProgramParams.vertexColor,
@@ -594,7 +607,7 @@ function drawMesh(projectionMatrix, shaderProgramParams, elt) {
 			0 // offset
 		);
 		gl.enableVertexAttribArray(shaderProgramParams.vertexColor);
-	}
+	}*/
 
 	// Normals
 	{
@@ -638,6 +651,7 @@ function drawMesh(projectionMatrix, shaderProgramParams, elt) {
 	                gl.UNSIGNED_SHORT, // type
 	                0 // offset
 	);
+
 }
 
 let time = 0.0;
@@ -660,7 +674,7 @@ function drawScene() {
 	                 45 * Math.PI / 180, // fieldOfView, in radians
 	                 gl.canvas.clientWidth / gl.canvas.clientHeight, // aspect
 	                 0.1, // zNear,
-	                 100 //zFar
+	                 300 //zFar
 	);
 
 	for (let elt of scene) {

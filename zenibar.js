@@ -322,7 +322,7 @@ function initGridBuffers(gl) {
 			positions[index + 2] = startZ + h * width; // z
 
 			vertexNormals[index + 0] = 0.0; // x
-			vertexNormals[index + 1] = Math.random();  //1.0; // y
+			vertexNormals[index + 1] = Math.random();  //1.0; // y randomize the normal to see the light effect
 			vertexNormals[index + 2] = 0.0; // z
 
 			colors = colors.concat(c);

@@ -1,15 +1,15 @@
 let gl;
 let meshes = [];
-let textures = [];
-let shaderProgramParams;
+let textures = {};
+let materials = {};
 let scene = [];
 
 function main() {
 	const canvas = document.getElementById("scene");
 	initGL(canvas);
 	initEvents(canvas);
-	initShaders();
 	loadTextures();
+	initMaterials();
 	loadScene();
 
 	drawScene();
@@ -44,7 +44,7 @@ function initEvents(canvas) {
 	canvas.addEventListener("mousewheel", handleMouseWheel, false);
 	canvas.addEventListener("DOMMouseScroll", handleMouseWheel, false);
 
-	document.addEventListener( "keydown", handleKeyDown, true);
+	document.addEventListener("keydown", handleKeyDown, true);
 }
 
 let mouseDown = false;
@@ -90,9 +90,9 @@ function handleMouseMove(event) {
 
 function handleMouseWheel(event) {
 
-    mat4.translate(globalSceneViewMatrix, globalSceneViewMatrix, [event.deltaX/30., 0, event.deltaY/30.]);
+	mat4.translate(globalSceneViewMatrix, globalSceneViewMatrix, [event.deltaX / 30., 0, event.deltaY / 30.]);
 
-    event.preventDefault();
+	event.preventDefault();
 
 	return false;
 }
@@ -119,32 +119,53 @@ function degToRad(degrees) {
 }
 
 /**
- * initialize all shader programs
- * @returns {{program: WebGLProgram, vertexPosition: GLint, vertexNormal: GLint, textureCoord: GLint, vertexColor: GLint, projectionMatrix: WebGLUniformLocation, modelViewMatrix: WebGLUniformLocation, normalMatrix: WebGLUniformLocation, uSampler: WebGLUniformLocation}}
+ * Create a list of materials to be used by the meshes
  */
-function initShaders() {
-	// let's initialize the shaders and the linked program
-	const shaderProgram = initShaderProgram("vshader-simple", "fshader-simple");
+function initMaterials() {
 
-	shaderProgramParams = {
-		program: shaderProgram,
+	let phongProgram = initShaderProgram("phong-vshader", "phong-fshader");
+	let phong = {
+		vShader: "phong-vshader",
+		fShader: "phong-fshader",
+		useTexture: true,
+		texture: textures.biere,
+		ka: 1.0,
+		kd: 1.0,
+		ks: 1.0,
+		shininess: 1.0,
+		ambientColor: [0.1, 0.1, 0.1],
+		diffuseColor: [0.933, 0.737, 0.204],
+		specularColor: [1, 1, 1],
+		program: phongProgram,
+		programParams: {
+			globals: {
+				vertexPosition: gl.getAttribLocation(phongProgram, 'aVertexPosition'),
+				vertexNormal: gl.getAttribLocation(phongProgram, 'aVertexNormal'),
+				textureCoord: gl.getAttribLocation(phongProgram, 'aTextureCoord'),
 
-		vertexPosition: gl.getAttribLocation(shaderProgram, 'aVertexPosition'),
-		vertexNormal: gl.getAttribLocation(shaderProgram, 'aVertexNormal'),
-		textureCoord: gl.getAttribLocation(shaderProgram, 'aTextureCoord'),
-		vertexColor: gl.getAttribLocation(shaderProgram, 'aVertexColor'),
+				projectionMatrix: gl.getUniformLocation(phongProgram, 'uProjectionMatrix'),
+				modelViewMatrix: gl.getUniformLocation(phongProgram, 'uModelViewMatrix'),
+				normalMatrix: gl.getUniformLocation(phongProgram, 'uNormalMatrix'),
 
-		projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
-		modelViewMatrix: gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
-		normalMatrix: gl.getUniformLocation(shaderProgram, 'uNormalMatrix'),
+				useTexture: gl.getUniformLocation(phongProgram, "uUseTexture"),
+				uSampler: gl.getUniformLocation(phongProgram, 'uSampler'),
 
-		uSampler: gl.getUniformLocation(shaderProgram, 'uSampler'),
-		useTexture: gl.getUniformLocation(shaderProgram, "uUseTexture"),
-		useLight: gl.getUniformLocation(shaderProgram, "uUseLight"),
-		ambientColor: gl.getUniformLocation(shaderProgram, "uAmbientColor"),
-		lightDirection: gl.getUniformLocation(shaderProgram, "uLightDirection"),
-		lightColor: gl.getUniformLocation(shaderProgram, "uLightColor"),
+				useLight: gl.getUniformLocation(phongProgram, "uUseLight"),
+				lightPos: gl.getUniformLocation(phongProgram, "uLightPos"),
+				lightColor: gl.getUniformLocation(phongProgram, "uLightColor")
+			},
+
+			ka: gl.getUniformLocation(phongProgram, "uKa"),
+			kd: gl.getUniformLocation(phongProgram, "uKd"),
+			ks: gl.getUniformLocation(phongProgram, "uKs"),
+			shininess: gl.getUniformLocation(phongProgram, "uShininess"),
+			ambientColor: gl.getUniformLocation(phongProgram, "uAmbientColor"),
+			diffuseColor: gl.getUniformLocation(phongProgram, "uDiffuseColor"),
+			specularColor: gl.getUniformLocation(phongProgram, "uSpecularColor"),
+		}
 	};
+
+	materials.phong = phong;
 }
 
 /**
@@ -206,8 +227,8 @@ function createProgram(vertexShader, fragmentShader) {
 
 
 function loadTextures() {
-	textures[0] = loadTexture("assets/biere-mousse-carre.jpg");
-	textures[1] = loadTexture("assets/biere2.jpg");
+	textures.biere = loadTexture("assets/biere-mousse-carre.jpg");
+	textures.biere2 = loadTexture("assets/biere2.jpg");
 }
 
 /**
@@ -250,16 +271,16 @@ function loadTexture(url) {
 function loadScene() {
 	loadMeshes();
 
+	//todo : 1 material par objet (inclus : ambiant, diffus, spec, emissif, ka, kd, ks, texture)
 	//todo : grille 3D de cubes
 	//todo : animer la grille (Y des vertices)
 
-	let eltGrid = {
+	/*let eltGrid = {
 		mesh: meshes[0], // grid mesh
 		translation: [0, 0, -20],
 		rotation: [.1, 0, 0],
 		scale: [1, 1, 1],
-		texture: textures[1],
-		useTexture: true
+		material: materials.phong
 	};
 	scene.push(eltGrid);
 
@@ -268,19 +289,19 @@ function loadScene() {
 		translation: [-5, 1, -20],
 		rotation: [.1, 0.1, 0],
 		scale: [1, 1, 1],
-		texture: textures[0],
-		useTexture: true
+		material: materials.phong
 	};
 	scene.push(eltCube1);
-
+*/
 	let eltCube2 = {
 		mesh: meshes[1], // re-use the same cube mesh
 		translation: [5, 1, -15],
 		rotation: [.1, 1, 0],
 		scale: [1, 1, 1],
-		texture: textures[1],
-		useTexture: true
+		material: materials.phong,
 	};
+	eltCube2.material.texture = textures.biere2;
+	eltCube2.material.useTexture = false;
 	scene.push(eltCube2);
 }
 
@@ -292,7 +313,7 @@ function loadMeshes() {
 
 	meshes.push(initCubeBuffers());
 
-	loadObjFile("assets/Bottle/12178_bottle_v1_L2.obj")
+	/*loadObjFile("assets/Bottle/12178_bottle_v1_L2.obj")
 		.then(result => {
 			      let bottle = createBufferFromData(result);
 			      meshes.push(bottle);
@@ -301,12 +322,26 @@ function loadMeshes() {
 				      translation: [0, 1, -20],
 				      rotation: [-Math.PI / 2., 0, 0],
 				      scale: [0.1, 0.1, 0.1],
-				      texture: textures[1],
-				      useTexture: true
+				      material: materials.phong
 			      };
 			      scene.push(eltBottle);
 		      }, error => alert(error)
 		);
+
+	loadObjFile("assets/Bottle_Belgian/beerbottle_belgian.obj")
+		.then(result => {
+			      let bottle2 = createBufferFromData(result);
+			      meshes.push(bottle2);
+			      let eltBottle2 = {
+				      mesh: bottle2,
+				      translation: [0, 0, -20],
+				      rotation: [0, 0, 0],
+				      scale: [10, 10, 10],
+				      material: materials.phong
+			      };
+			      scene.push(eltBottle2);
+		      }, error => alert(error)
+		);*/
 }
 
 
@@ -320,8 +355,6 @@ function createBufferFromData(data) {
 	const normalsBuffer = gl.createBuffer();
 	// Buffer for texture coordinates
 	let textureCoordsBuffer = gl.createBuffer();
-	// Buffer for colors
-	let colorsBuffer = null;
 
 
 	// Bind to the positionsBuffer
@@ -334,12 +367,6 @@ function createBufferFromData(data) {
 	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data.textures), gl.STATIC_DRAW);
 	//}
 
-	if (data.colors !== undefined && data.colors !== null) {
-		colorsBuffer = gl.createBuffer();
-		gl.bindBuffer(gl.ARRAY_BUFFER, colorsBuffer);
-		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data.colors), gl.STATIC_DRAW);
-	}
-
 	gl.bindBuffer(gl.ARRAY_BUFFER, normalsBuffer);
 	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data.vertexNormals), gl.STATIC_DRAW);
 
@@ -349,7 +376,6 @@ function createBufferFromData(data) {
 	return {
 		verticesBuffer: positionsBuffer,
 		textureCoordsBuffer: textureCoordsBuffer,
-		colorsBuffer: colorsBuffer,
 		normalsBuffer: normalsBuffer,
 		indicesBuffer: indicesBuffer,
 		data: data
@@ -592,35 +618,24 @@ function initCubeBuffers() {
 }
 
 function drawMesh(projectionMatrix, elt) {
+
+	let programParams = elt.material.programParams;
+
 	let modelViewMatrix = mat4.create();
+	// move object
+	{
+		let worldMatrix = mat4.create();
+		mat4.invert(worldMatrix, globalSceneViewMatrix);
+		mat4.multiply(modelViewMatrix, modelViewMatrix, worldMatrix);
 
-	let worldMatrix = mat4.create();
-	mat4.invert(worldMatrix, globalSceneViewMatrix);
+		mat4.translate(modelViewMatrix, modelViewMatrix, elt.translation);
 
-	mat4.multiply(modelViewMatrix, modelViewMatrix, worldMatrix);
+		mat4.rotate(modelViewMatrix, modelViewMatrix, elt.rotation[0], [1, 0, 0]); // X
+		mat4.rotate(modelViewMatrix, modelViewMatrix, elt.rotation[1], [0, 1, 0]); // Y
+		mat4.rotate(modelViewMatrix, modelViewMatrix, elt.rotation[2], [0, 0, 1]); // Z
 
-
-	mat4.translate(modelViewMatrix,     // destination matrix
-	               modelViewMatrix,     // matrix to translate
-	               elt.translation);   // amount to translate
-
-	//let's rotate the global view
-	mat4.rotate(modelViewMatrix,    // destination matrix
-	            modelViewMatrix,    // matrix to rotate
-	            elt.rotation[0],   // amount to rotate in radians
-	            [1, 0, 0]);         // axis to rotate around (X)
-	mat4.rotate(modelViewMatrix,
-	            modelViewMatrix,
-	            elt.rotation[1],
-	            [0, 1, 0]);         // axis to rotate around (Y)
-	mat4.rotate(modelViewMatrix,
-	            modelViewMatrix,
-	            elt.rotation[2],
-	            [0, 0, 1]);         // axis to rotate around (Z)
-
-	mat4.scale(modelViewMatrix,
-	           modelViewMatrix,
-	           elt.scale);
+		mat4.scale(modelViewMatrix, modelViewMatrix, elt.scale);
+	}
 
 	const normalMatrix = mat4.create();
 	mat4.invert(normalMatrix, modelViewMatrix);
@@ -629,97 +644,74 @@ function drawMesh(projectionMatrix, elt) {
 	// Set the vertexPosition attribute of the shader
 	{
 		gl.bindBuffer(gl.ARRAY_BUFFER, elt.mesh.verticesBuffer);
-		gl.vertexAttribPointer(
-			shaderProgramParams.vertexPosition,
-			3,      // size : X,Y,Z = 3 values
-			gl.FLOAT,       // type
-			false, // normalized
-			0,      // stride
-			0       // offset
-		);
-		gl.enableVertexAttribArray(shaderProgramParams.vertexPosition);
+		gl.vertexAttribPointer(programParams.globals.vertexPosition, 3, gl.FLOAT, false, 0, 0);
+		gl.enableVertexAttribArray(programParams.globals.vertexPosition);
 	}
 
 	//Set the texture coordinates
-	if (elt.texture !== null && elt.useTexture === true) {
+	if (elt.material.texture !== null && elt.material.useTexture === true) {
 		gl.bindBuffer(gl.ARRAY_BUFFER, elt.mesh.textureCoordsBuffer);
-		gl.vertexAttribPointer(
-			shaderProgramParams.textureCoord,
-			2, // size : U,V = 2 values
-			gl.FLOAT, // type
-			false, //normalized
-			0, // stride
-			0 // offset
-		);
-		gl.enableVertexAttribArray(shaderProgramParams.textureCoord);
+		gl.vertexAttribPointer(programParams.globals.textureCoord, 2, gl.FLOAT, false, 0, 0);
+		gl.enableVertexAttribArray(programParams.globals.textureCoord);
 		// Tell WebGL we want to affect texture unit 0
 		gl.activeTexture(gl.TEXTURE0);
 		// Bind the texture to texture unit 0
-		gl.bindTexture(gl.TEXTURE_2D, elt.texture);
+		gl.bindTexture(gl.TEXTURE_2D, elt.material.texture);
 	}
-
-	// Set the vertexColor attribute of the shader
-	/*if (elt.mesh.colorsBuffer !== undefined && elt.mesh.colorsBuffer !== null) {
-		gl.bindBuffer(gl.ARRAY_BUFFER, elt.mesh.colorsBuffer);
-		gl.vertexAttribPointer(
-			shaderProgramParams.vertexColor,
-			4, // size : R,G,B,A = 4 values
-			gl.FLOAT, // type
-			false, // normalized
-			0, // stride
-			0 // offset
-		);
-		gl.enableVertexAttribArray(shaderProgramParams.vertexColor);
-	}*/
 
 	// Normals
 	{
 		gl.bindBuffer(gl.ARRAY_BUFFER, elt.mesh.normalsBuffer);
-		gl.vertexAttribPointer(
-			shaderProgramParams.vertexNormal,
-			3, // size : X,Y,Z = 3 values
-			gl.FLOAT, // type
-			false, // normalized
-			0, //stride
-			0 //offste
-		);
-		gl.enableVertexAttribArray(shaderProgramParams.vertexNormal);
+		gl.vertexAttribPointer(programParams.globals.vertexNormal, 3, gl.FLOAT, false, 0, 0);
+		gl.enableVertexAttribArray(programParams.globals.vertexNormal);
 	}
-
 
 	// Set indices to use to index the vertices
 	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, elt.mesh.indicesBuffer);
 
 	// Set the shader program to use
-	gl.useProgram(shaderProgramParams.program);
+	gl.useProgram(elt.material.program);
 
-	// Set the shader uniforms
-	gl.uniformMatrix4fv(
-		shaderProgramParams.projectionMatrix,
-		false, // transpose
-		projectionMatrix);
-	gl.uniformMatrix4fv(
-		shaderProgramParams.modelViewMatrix,
-		false, // transpose
-		modelViewMatrix);
-	gl.uniformMatrix4fv(
-		shaderProgramParams.normalMatrix,
-		false, // transpose
-		normalMatrix);
-	gl.uniform1i(shaderProgramParams.useTexture, elt.useTexture);
+	// Set the globals shader uniforms
+	gl.uniformMatrix4fv(programParams.globals.projectionMatrix, false, projectionMatrix);
+	gl.uniformMatrix4fv(programParams.globals.modelViewMatrix, false, modelViewMatrix);
+	gl.uniformMatrix4fv(programParams.globals.normalMatrix, false, normalMatrix);
+	gl.uniform1i(programParams.globals.useTexture, elt.useTexture);
 
-	gl.uniform1i(shaderProgramParams.useLight, useLight);
-	if (useLight) {
-		gl.uniform3f(shaderProgramParams.ambientColor, 0.8, 0.8, 0.8);
+	gl.uniform1i(programParams.globals.useLight, useLight);
+	gl.uniform3fv(programParams.globals.lightPos, lightPos);
+	gl.uniform3fv(programParams.globals.lightColor, lightColor);
 
-		let lightDirection = [-100.0, -100.0, -100.0];
-		let adjustedLD = vec3.create();
-		vec3.normalize(lightDirection, adjustedLD);
-		vec3.scale(adjustedLD, -1);
-		gl.uniform3fv(shaderProgramParams.lightDirection, adjustedLD);
+	//set specific shader uniforms
+	for (const key in programParams) {
+		if (key !== "globals" && programParams.hasOwnProperty(key)) {
 
-		gl.uniform3f(shaderProgramParams.lightColor, 0.9, 0.9, 0.9);
+			let value = elt.material[key];
+			let type = typeof (value);
+
+			if (type === "number") {
+				gl.uniform1f(programParams.globals[key], elt.material[key]);
+			}
+			else if (type === "boolean") {
+				gl.uniform1i(programParams.globals[key], elt.material[key]);
+			}
+			else if (type === "object") {
+				if (Array.isArray(value)) {
+					if (value.length === 2) {
+						gl.uniform2fv(programParams.globals[key], elt.material[key]);
+					}
+					else if (value.length === 3) {
+						gl.uniform3fv(programParams.globals[key], elt.material[key]);
+					}
+					else if (value.length === 4) {
+						gl.uniform4fv(programParams.globals[key], elt.material[key]);
+					}
+				}
+			}
+
+		}
 	}
+
 
 	// Let's render
 	gl.drawElements(drawMode,
@@ -732,6 +724,8 @@ function drawMesh(projectionMatrix, elt) {
 
 let time = 0.0;
 let useLight = true;
+let lightPos = [30, 50, 20];
+let lightColor = [1, 1, 1];
 let drawMode = 4;
 
 /**
@@ -760,7 +754,6 @@ function drawScene() {
 	}
 
 	time += 0.01;
-
 
 	requestAnimationFrame(drawScene);
 }

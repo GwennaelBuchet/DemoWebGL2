@@ -125,23 +125,21 @@ function initMaterials() {
 
 	let phongProgram = initShaderProgram("phong-vshader", "phong-fshader");
 	let phong = {
-		vShader: "phong-vshader",
-		fShader: "phong-fshader",
 		useTexture: true,
 		texture: textures.biere,
 		ka: 1.0,
 		kd: 1.0,
 		ks: 1.0,
-		shininess: 1.0,
+		shininess: 90,
 		ambientColor: [0.1, 0.1, 0.1],
 		diffuseColor: [0.933, 0.737, 0.204],
-		specularColor: [1, 1, 1],
+		specularColor: [1., 1., 1.],
 		program: phongProgram,
 		programParams: {
 			globals: {
 				vertexPosition: gl.getAttribLocation(phongProgram, 'aVertexPosition'),
-				vertexNormal: gl.getAttribLocation(phongProgram, 'aVertexNormal'),
 				textureCoord: gl.getAttribLocation(phongProgram, 'aTextureCoord'),
+				vertexNormal: gl.getAttribLocation(phongProgram, 'aVertexNormal'),
 
 				projectionMatrix: gl.getUniformLocation(phongProgram, 'uProjectionMatrix'),
 				modelViewMatrix: gl.getUniformLocation(phongProgram, 'uModelViewMatrix'),
@@ -161,7 +159,7 @@ function initMaterials() {
 			shininess: gl.getUniformLocation(phongProgram, "uShininess"),
 			ambientColor: gl.getUniformLocation(phongProgram, "uAmbientColor"),
 			diffuseColor: gl.getUniformLocation(phongProgram, "uDiffuseColor"),
-			specularColor: gl.getUniformLocation(phongProgram, "uSpecularColor"),
+			specularColor: gl.getUniformLocation(phongProgram, "uSpecularColor")
 		}
 	};
 
@@ -271,11 +269,10 @@ function loadTexture(url) {
 function loadScene() {
 	loadMeshes();
 
-	//todo : 1 material par objet (inclus : ambiant, diffus, spec, emissif, ka, kd, ks, texture)
 	//todo : grille 3D de cubes
 	//todo : animer la grille (Y des vertices)
 
-	/*let eltGrid = {
+	let eltGrid = {
 		mesh: meshes[0], // grid mesh
 		translation: [0, 0, -20],
 		rotation: [.1, 0, 0],
@@ -292,7 +289,7 @@ function loadScene() {
 		material: materials.phong
 	};
 	scene.push(eltCube1);
-*/
+
 	let eltCube2 = {
 		mesh: meshes[1], // re-use the same cube mesh
 		translation: [5, 1, -15],
@@ -313,7 +310,7 @@ function loadMeshes() {
 
 	meshes.push(initCubeBuffers());
 
-	/*loadObjFile("assets/Bottle/12178_bottle_v1_L2.obj")
+	loadObjFile("assets/Bottle/12178_bottle_v1_L2.obj")
 		.then(result => {
 			      let bottle = createBufferFromData(result);
 			      meshes.push(bottle);
@@ -327,21 +324,6 @@ function loadMeshes() {
 			      scene.push(eltBottle);
 		      }, error => alert(error)
 		);
-
-	loadObjFile("assets/Bottle_Belgian/beerbottle_belgian.obj")
-		.then(result => {
-			      let bottle2 = createBufferFromData(result);
-			      meshes.push(bottle2);
-			      let eltBottle2 = {
-				      mesh: bottle2,
-				      translation: [0, 0, -20],
-				      rotation: [0, 0, 0],
-				      scale: [10, 10, 10],
-				      material: materials.phong
-			      };
-			      scene.push(eltBottle2);
-		      }, error => alert(error)
-		);*/
 }
 
 
@@ -432,11 +414,11 @@ function initGridBuffers() {
 	for (let h = 0; h <= nbH; h++) {
 		for (let w = 0; w <= nbW; w++) {
 			positions[index + 0] = startX + w * width; // x
-			positions[index + 1] = startY; // y
+			positions[index + 1] = startY + Math.random() / 3.0; // y
 			positions[index + 2] = startZ + h * width; // z
 
 			normals[index + 0] = 0.0; // x
-			normals[index + 1] = 1.0; // y randomize the normal to see the light effect
+			normals[index + 1] = 1.0; // y
 			normals[index + 2] = 0.0; // z
 
 			colors = colors.concat(c);
@@ -634,6 +616,9 @@ function drawMesh(projectionMatrix, elt) {
 		mat4.rotate(modelViewMatrix, modelViewMatrix, elt.rotation[1], [0, 1, 0]); // Y
 		mat4.rotate(modelViewMatrix, modelViewMatrix, elt.rotation[2], [0, 0, 1]); // Z
 
+
+		mat4.rotate(modelViewMatrix, modelViewMatrix, time, [0, 1, 0]); // Y
+
 		mat4.scale(modelViewMatrix, modelViewMatrix, elt.scale);
 	}
 
@@ -690,21 +675,21 @@ function drawMesh(projectionMatrix, elt) {
 			let type = typeof (value);
 
 			if (type === "number") {
-				gl.uniform1f(programParams.globals[key], elt.material[key]);
+				gl.uniform1f(programParams[key], elt.material[key]);
 			}
 			else if (type === "boolean") {
-				gl.uniform1i(programParams.globals[key], elt.material[key]);
+				gl.uniform1i(programParams[key], elt.material[key]);
 			}
 			else if (type === "object") {
 				if (Array.isArray(value)) {
 					if (value.length === 2) {
-						gl.uniform2fv(programParams.globals[key], elt.material[key]);
+						gl.uniform2fv(programParams[key], elt.material[key]);
 					}
 					else if (value.length === 3) {
-						gl.uniform3fv(programParams.globals[key], elt.material[key]);
+						gl.uniform3fv(programParams[key], elt.material[key]);
 					}
 					else if (value.length === 4) {
-						gl.uniform4fv(programParams.globals[key], elt.material[key]);
+						gl.uniform4fv(programParams[key], elt.material[key]);
 					}
 				}
 			}
@@ -724,8 +709,8 @@ function drawMesh(projectionMatrix, elt) {
 
 let time = 0.0;
 let useLight = true;
-let lightPos = [30, 50, 20];
-let lightColor = [1, 1, 1];
+let lightPos = [10.0, 10.0, 10.0];
+let lightColor = [1.0, 1.0, 1.0];
 let drawMode = 4;
 
 /**

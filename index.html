@@ -21,17 +21,21 @@
 
 in vec3 aVertexPosition;
 in vec3 aVertexNormal;
+in vec2 aTextureCoord;
 
 uniform mat4 uNormalMatrix, uModelViewMatrix, uProjectionMatrix;
 
 out vec3 normalInterp;
 out vec3 vertPos;
+out vec2 vTextureCoord;
 
 void main()
 {
     vec4 vertPos4 = uModelViewMatrix * vec4(aVertexPosition, 1.0);
     vertPos = vec3(vertPos4) / vertPos4.w;
     normalInterp = vec3(uNormalMatrix * vec4(aVertexNormal, 0.0));
+
+    vTextureCoord = aTextureCoord;
 
     gl_Position = uProjectionMatrix * vertPos4;
 }
@@ -51,8 +55,13 @@ uniform vec3 uAmbientColor;
 uniform vec3 uDiffuseColor;
 uniform vec3 uSpecularColor;
 
+uniform sampler2D uSampler;
+uniform bool uUseTexture;
+uniform bool uUseLight;
+
 in vec3 normalInterp;
 in vec3 vertPos;
+in vec2 vTextureCoord;
 
 void main()
 {
@@ -70,8 +79,16 @@ void main()
         specular = pow(specAngle, uShininess);
     }
 
+    vec3 texelColor;
+    if (uUseTexture == true) {
+        texelColor = vec3(texture(uSampler, vTextureCoord));
+    }
+    else {
+        texelColor = uDiffuseColor;
+    }
+
     outColor = vec4(uKa * uAmbientColor +
-                    uKd * lambertian * uDiffuseColor +
+                    uKd * lambertian * texelColor +
                     uKs * specular * uSpecularColor, 1.0);
 }
 

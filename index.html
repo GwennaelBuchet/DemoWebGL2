@@ -17,7 +17,7 @@
 </div>
 
 
-<script id="vshader-simple" type="x-shader/x-vertex">#version 300 es
+<script id="phong-vshader" type="x-shader/x-vertex">#version 300 es
 
 in vec4 aVertexPosition;
 in vec3 aVertexNormal;
@@ -54,7 +54,7 @@ void main(void) {
 
 </script>
 
-<script id="fshader-simple" type="x-shader/x-fragment">#version 300 es
+<script id="phong-fshader" type="x-shader/x-fragment">#version 300 es
 precision mediump float;
 
 in vec2 vTextureCoord;

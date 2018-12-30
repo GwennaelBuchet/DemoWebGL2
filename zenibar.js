@@ -419,7 +419,7 @@ function initGridBuffers() {
 	for (let h = 0; h <= nbH; h++) {
 		for (let w = 0; w <= nbW; w++) {
 			positions[index + 0] = startX + w * width; // x
-			positions[index + 1] = startY + Math.random() / 3.0; // y
+			positions[index + 1] = startY + Math.sin(h / 5) / 4; // Math.random() / 6.0; // y
 			positions[index + 2] = startZ + h * width; // z
 
 			normals[index + 0] = 0.0; // x

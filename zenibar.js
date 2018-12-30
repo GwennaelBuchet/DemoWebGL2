@@ -112,6 +112,10 @@ function handleKeyDown(event) {
 		drawMode = gl.POINTS;
 	}
 
+	else if (event.key === " ") {
+		isAnimated = !isAnimated;
+	}
+
 }
 
 function degToRad(degrees) {
@@ -127,14 +131,14 @@ function initMaterials() {
 	let phong = {
 		name: "phong",
 		useTexture: true,
-		texture: textures.biere,
+		texture: textures.biere2,
 		program: phongProgram,
 		ka: 1.0,
 		kd: 1.0,
 		ks: 1.0,
 		shininess: 90,
 		ambientColor: [0.1, 0.1, 0.1],
-		diffuseColor: [0.933, 0.737, 0.204],
+		diffuseColor: [0.267, 0.329, 0.415],
 		specularColor: [1., 1., 1.],
 		programParams: {
 			globals: {
@@ -279,8 +283,9 @@ function loadScene() {
 		translation: [0, 0, -20],
 		rotation: [.1, 0, 0],
 		scale: [1, 1, 1],
-		material: materials.phong
+		material: Object.assign({}, materials.phong)
 	};
+	eltGrid.material.useTexture = false;
 	scene.push(eltGrid);
 
 	let eltCube1 = {
@@ -289,7 +294,7 @@ function loadScene() {
 		translation: [-5, 1, -20],
 		rotation: [.1, 0.1, 0],
 		scale: [1, 1, 1],
-		material: materials.phong
+		material: Object.assign({}, materials.phong)
 	};
 	scene.push(eltCube1);
 
@@ -299,9 +304,8 @@ function loadScene() {
 		translation: [5, 1, -15],
 		rotation: [.1, 1, 0],
 		scale: [1, 1, 1],
-		material: materials.phong,
+		material: Object.assign({}, materials.phong),
 	};
-	eltCube2.material.texture = textures.biere2;
 	eltCube2.material.useTexture = true;
 	scene.push(eltCube2);
 }
@@ -326,6 +330,8 @@ function loadMeshes() {
 				      scale: [0.1, 0.1, 0.1],
 				      material: materials.phong
 			      };
+
+			      eltBottle.material.texture = textures.biere;
 			      scene.push(eltBottle);
 		      }, error => alert(error)
 		);
@@ -713,6 +719,7 @@ function drawMesh(projectionMatrix, elt) {
 }
 
 let time = 0.0;
+let isAnimated = true;
 let useLight = true;
 let lightPos = [10.0, 10.0, 10.0];
 let lightColor = [1.0, 1.0, 1.0];
@@ -743,7 +750,9 @@ function drawScene() {
 		drawMesh(projectionMatrix, elt);
 	}
 
-	time += 0.01;
+	if (isAnimated) {
+		time += 0.01;
+	}
 
 	requestAnimationFrame(drawScene);
 }

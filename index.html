@@ -19,82 +19,52 @@
 
 <script id="phong-vshader" type="x-shader/x-vertex">#version 300 es
 
-in vec4 aVertexPosition;
+in vec3 aVertexPosition;
 in vec3 aVertexNormal;
-in vec2 aTextureCoord;
 
-uniform mat4 uNormalMatrix;
-uniform mat4 uModelViewMatrix;
-uniform mat4 uProjectionMatrix;
+uniform mat4 uNormalMatrix, uModelViewMatrix, uProjectionMatrix;
 
-out vec3 vVertPos;
-out vec2 vTextureCoord;
-out vec3 vNormalInterp;
+out vec3 normalInterp;
+out vec3 vertPos;
 
-void main(void) {
-    vec4 vertPos4 = uModelViewMatrix * aVertexPosition;
-    vNormalInterp = vec3(uNormalMatrix * vec4(aVertexNormal, 0.0));
-
-    vVertPos = vec3(vertPos4) / vertPos4.w;
-    vTextureCoord = aTextureCoord;
+void main()
+{
+    vec4 vertPos4 = uModelViewMatrix * vec4(aVertexPosition, 1.0);
+    vertPos = vec3(vertPos4) / vertPos4.w;
+    normalInterp = vec3(uNormalMatrix * vec4(aVertexNormal, 0.0));
 
     gl_Position = uProjectionMatrix * vertPos4;
 }
-
 
 </script>
 
 <script id="phong-fshader" type="x-shader/x-fragment">#version 300 es
 precision mediump float;
+out vec4 outColor;
 
-in vec2 vTextureCoord;
-in vec3 vNormalInterp;
-in vec3 vVertPos;
-
-uniform bool uUseTexture;
-uniform sampler2D uSampler;
-
-// Material
-uniform float uKa;   // Ambient reflection coefficient
-uniform float uKd;   // Diffuse reflection coefficient
-uniform float uKs;   // Specular reflection coefficient
+uniform vec3 uLightPos;
 uniform float uShininess;
+uniform float uKa;
+uniform float uKd;
+uniform float uKs;
 uniform vec3 uAmbientColor;
 uniform vec3 uDiffuseColor;
 uniform vec3 uSpecularColor;
 
-// Light
-uniform bool uUseLight;
-uniform vec3 uLightPos;
-uniform vec3 uLightColor;
+in vec3 normalInterp;
+in vec3 vertPos;
 
-out vec4 outColor;
-
-void main(void) {
-    /*vec4 texelColor;
-     if (uUseTexture == true) {
-        texelColor = texture(uSampler, vTextureCoord);
-     }
-     else {
-        texelColor = vVertexColor;
-     }
-
-    outColor = vec4(texelColor.rgb * vLighting, texelColor.a);
-    */
-
-    //todo : utiliser useLight
-    //todo : utiliser uLightColor
-    //todo : add alpha
-
-   /* vec3 N = normalize(vNormalInterp);
-    vec3 L = normalize(uLightPos - vVertPos);
+void main()
+{
+    vec3 N = normalize(normalInterp);
+    vec3 L = normalize(uLightPos - vertPos);
 
     // Lambert's cosine law
     float lambertian = max(dot(N, L), 0.0);
     float specular = 0.0;
-    if (lambertian > 0.0) {
-        vec3 R = reflect(-L, N);        // Reflected light vector
-        vec3 V = normalize(-vVertPos);  // Vector to viewer
+    if(lambertian > 0.0) {
+        vec3 R = reflect(-L, N);      // Reflected light vector
+        vec3 V = normalize(-vertPos); // Vector to viewer
         // Compute the specular term
         float specAngle = max(dot(R, V), 0.0);
         specular = pow(specAngle, uShininess);
@@ -102,10 +72,7 @@ void main(void) {
 
     outColor = vec4(uKa * uAmbientColor +
                     uKd * lambertian * uDiffuseColor +
-                    uKs * specular * uSpecularColor, 1.0);*/
-
-    outColor = vec4(uAmbientColor, 1);
-    //outColor = vec4(1, 1, 1, 1);
+                    uKs * specular * uSpecularColor, 1.0);
 }
 
 </script>
@@ -115,24 +82,22 @@ void main(void) {
 in vec4 aVertexPosition;
 in vec3 aVertexNormal;
 in vec2 aTextureCoord;
-in vec4 aVertexColor;
 
 uniform mat4 uNormalMatrix;
 uniform mat4 uModelViewMatrix;
 uniform mat4 uProjectionMatrix;
+
 uniform bool uUseLight;
 uniform vec3 uAmbientColor;
 uniform vec3 uLightDirection;
 uniform vec3 uLightColor;
 
 out vec2 vTextureCoord;
-out vec4 vVertexColor;
 out vec3 vLighting;
 
 void main(void) {
   gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
   vTextureCoord = aTextureCoord;
-  vVertexColor = aVertexColor;
 
     if (!uUseLight) {
         vLighting = vec3(1.0, 1.0, 1.0);
@@ -148,13 +113,16 @@ void main(void) {
 
 
 
+
+
+
+
 </script>
 
 <script id="basic-fshader" type="x-shader/x-fragment">#version 300 es
 precision mediump float;
 
 in vec2 vTextureCoord;
-in vec4 vVertexColor;
 in vec3 vLighting;
 
 uniform sampler2D uSampler;
@@ -168,11 +136,15 @@ void main(void) {
         texelColor = texture(uSampler, vTextureCoord);
      }
      else {
-        texelColor = vVertexColor;
+        texelColor = vec4(0.9, 1.0, 0.8, 1.0);
      }
 
     outColor = vec4(texelColor.rgb * vLighting, texelColor.a);
 }
+
+
+
+
 
 
 

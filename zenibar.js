@@ -125,8 +125,10 @@ function initMaterials() {
 
 	let phongProgram = initShaderProgram("phong-vshader", "phong-fshader");
 	let phong = {
+		name: "phong",
 		useTexture: true,
 		texture: textures.biere,
+		program: phongProgram,
 		ka: 1.0,
 		kd: 1.0,
 		ks: 1.0,
@@ -134,7 +136,6 @@ function initMaterials() {
 		ambientColor: [0.1, 0.1, 0.1],
 		diffuseColor: [0.933, 0.737, 0.204],
 		specularColor: [1., 1., 1.],
-		program: phongProgram,
 		programParams: {
 			globals: {
 				vertexPosition: gl.getAttribLocation(phongProgram, 'aVertexPosition'),
@@ -273,6 +274,7 @@ function loadScene() {
 	//todo : animer la grille (Y des vertices)
 
 	let eltGrid = {
+		name: "grid",
 		mesh: meshes[0], // grid mesh
 		translation: [0, 0, -20],
 		rotation: [.1, 0, 0],
@@ -282,6 +284,7 @@ function loadScene() {
 	scene.push(eltGrid);
 
 	let eltCube1 = {
+		name: "cube1",
 		mesh: meshes[1], // cube mesh
 		translation: [-5, 1, -20],
 		rotation: [.1, 0.1, 0],
@@ -291,6 +294,7 @@ function loadScene() {
 	scene.push(eltCube1);
 
 	let eltCube2 = {
+		name: "cube2",
 		mesh: meshes[1], // re-use the same cube mesh
 		translation: [5, 1, -15],
 		rotation: [.1, 1, 0],
@@ -298,7 +302,7 @@ function loadScene() {
 		material: materials.phong,
 	};
 	eltCube2.material.texture = textures.biere2;
-	eltCube2.material.useTexture = false;
+	eltCube2.material.useTexture = true;
 	scene.push(eltCube2);
 }
 
@@ -315,6 +319,7 @@ function loadMeshes() {
 			      let bottle = createBufferFromData(result);
 			      meshes.push(bottle);
 			      let eltBottle = {
+				      name: "bottle",
 				      mesh: bottle,
 				      translation: [0, 1, -20],
 				      rotation: [-Math.PI / 2., 0, 0],
@@ -661,7 +666,7 @@ function drawMesh(projectionMatrix, elt) {
 	gl.uniformMatrix4fv(programParams.globals.projectionMatrix, false, projectionMatrix);
 	gl.uniformMatrix4fv(programParams.globals.modelViewMatrix, false, modelViewMatrix);
 	gl.uniformMatrix4fv(programParams.globals.normalMatrix, false, normalMatrix);
-	gl.uniform1i(programParams.globals.useTexture, elt.useTexture);
+	gl.uniform1i(programParams.globals.useTexture, elt.material.useTexture);
 
 	gl.uniform1i(programParams.globals.useLight, useLight);
 	gl.uniform3fv(programParams.globals.lightPos, lightPos);

@@ -46,7 +46,7 @@ function initGL(canvas) {
  */
 function initEvents(canvas) {
 	mat4.identity(globalSceneViewMatrix);
-	mat4.translate(globalSceneViewMatrix, globalSceneViewMatrix, [0, 0, 25.0]);
+	mat4.translate(globalSceneViewMatrix, globalSceneViewMatrix, [0, 5, 25.0]);
 	// Mouse interaction
 	canvas.addEventListener("mousedown", handleMouseDown, false);
 	canvas.addEventListener("mouseup", handleMouseUp, false);
@@ -330,7 +330,7 @@ function loadScene() {
 		name: "grid",
 		mesh: meshes[0], // grid mesh
 		translation: [0, 0, 0],
-		rotation: [.1, 0, 0],
+		rotation: [0, 0, 0],
 		scale: [1, 1, 1],
 		material: Object.assign({}, materials.phong)
 	};
@@ -342,7 +342,7 @@ function loadScene() {
 		name: "cube1",
 		mesh: meshes[1], // cube mesh
 		translation: [-5, 1, 0],
-		rotation: [.1, 0.1, 0],
+		rotation: [0, 0.1, 0],
 		scale: [1, 1, 1],
 		material: Object.assign({}, materials.phong)
 	};
@@ -352,7 +352,7 @@ function loadScene() {
 		name: "cube2",
 		mesh: meshes[1], // re-use the same cube mesh
 		translation: [5, 1, 5],
-		rotation: [.1, 1, 0],
+		rotation: [0, 1, 0],
 		scale: [1, 1, 1],
 		material: Object.assign({}, materials.phong)
 	};
@@ -374,7 +374,7 @@ function loadMeshes() {
 	                   }, loadExternalMeshes);
 */
 
-	loadObjFile("assets/Bottle/12178_bottle_v1_L2.obj")
+	loadObjFile("assets/Bottle/12178_bottle_v1_L2.obj", "obj")
 		.then(result => {
 			      let bottle = createBufferFromData(result);
 			      meshes.push(bottle);
@@ -392,7 +392,7 @@ function loadMeshes() {
 		      }, error => alert(error)
 		);
 
-	loadObjFile("assets/Bottle_Opener/15524_Bottle_Opener-Mermaid_v1.obj")
+	loadObjFile("assets/Bottle_Opener/15524_Bottle_Opener-Mermaid_v1.obj", "obj")
 		.then(result => {
 			      let body = createBufferFromData(result);
 			      meshes.push(body);
@@ -408,9 +408,32 @@ function loadMeshes() {
 			      eltBody.material.diffuseColor = [0.267, 0.329, 0.415];
 			      eltBody.material.specularColor = [1., 1., 1.];
 			      eltBody.material.useTexture = false;
+			      eltBody.material.texture = null;
 			      scene.push(eltBody);
 		      }, error => alert(error)
 		);
+
+	/*loadObjFile("assets/teapot.json", "json")
+		.then(result => {
+			      let teapot = createBufferFromData(result);
+			      meshes.push(teapot);
+			      let eltBody = {
+				      name: "teapot",
+				      mesh: teapot,
+				      translation: [-10, 0, 10],
+				      rotation: [0, 0, 0],
+				      scale: [1, 1, 1],
+				      material: Object.assign({}, materials.toon)
+			      };
+			      eltBody.material.ambientColor = [0.1, 0.1, 0.1];
+			      eltBody.material.diffuseColor = [0.760, 0.494, 0.815];
+			      eltBody.material.specularColor = [1., 1., 1.];
+			      eltBody.material.useTexture = false;
+			      eltBody.material.texture = null;
+			      scene.push(eltBody);
+		      }, error => alert(error)
+		);
+		*/
 }
 
 /*function loadExternalMeshes(m) {
@@ -477,13 +500,14 @@ function createBufferFromData(data) {
 	// Fill the buffer with vertices positions
 	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data.vertices), gl.STATIC_DRAW);
 
-	//if (data.textures !== undefined && data.textures !== null) {
-	gl.bindBuffer(gl.ARRAY_BUFFER, textureCoordsBuffer);
-	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data.textures), gl.STATIC_DRAW);
-	//}
+	if (data.textures !== undefined && data.textures !== null) {
+		gl.bindBuffer(gl.ARRAY_BUFFER, textureCoordsBuffer);
+		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data.textures), gl.STATIC_DRAW);
+	}
 
+	let normals = data.vertexNormals === undefined ? data.normals : data.vertexNormals;
 	gl.bindBuffer(gl.ARRAY_BUFFER, normalsBuffer);
-	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data.vertexNormals), gl.STATIC_DRAW);
+	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(normals), gl.STATIC_DRAW);
 
 	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indicesBuffer);
 	gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(data.indices), gl.STATIC_DRAW);
@@ -501,9 +525,10 @@ function createBufferFromData(data) {
 /**
  * Load external Obj file
  * @param url {String}
+ * @param type {String} "obj" | "json"
  * @returns {Promise<any>}
  */
-function loadObjFile(url) {
+function loadObjFile(url, type) {
 
 	return new Promise((resolve, reject) => {
 
@@ -512,7 +537,13 @@ function loadObjFile(url) {
 				return resp.text();
 			})
 			.then(data => {
-				let mesh = new OBJ.Mesh(data);
+				let mesh;
+				if (type === "obj") {
+					mesh = new OBJ.Mesh(data);
+				}
+				else {
+					mesh = JSON.parse(data);
+				}
 				resolve(mesh);
 			})
 			.catch(function (error) {
@@ -773,10 +804,12 @@ function drawMesh(projectionMatrix, elt) {
 		gl.bindBuffer(gl.ARRAY_BUFFER, elt.mesh.textureCoordsBuffer);
 		gl.vertexAttribPointer(programParams.globals.textureCoord, 2, gl.FLOAT, false, 0, 0);
 		gl.enableVertexAttribArray(programParams.globals.textureCoord);
-		// Tell WebGL we want to affect texture unit 0
-		gl.activeTexture(gl.TEXTURE0);
-		// Bind the texture to texture unit 0
-		gl.bindTexture(gl.TEXTURE_2D, elt.material.texture);
+		if (elt.material.texture !== null) {
+			// Tell WebGL we want to affect texture unit 0
+			gl.activeTexture(gl.TEXTURE0);
+			// Bind the texture to texture unit 0
+			gl.bindTexture(gl.TEXTURE_2D, elt.material.texture);
+		}
 	}
 
 	// Normals

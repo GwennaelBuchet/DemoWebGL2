@@ -121,18 +121,30 @@ function handleMouseWheel(event) {
 }
 
 function handleKeyDown(event) {
-	if (event.key === "l" || event.key === "L") {
+
+	//console.log(event.key);
+
+	if (event.key.toUpperCase() === "L") {
 		useLight = !useLight;
 	}
 
-	else if (event.key === "w" || event.key === "W") {
+	else if (event.key.toUpperCase() === "w") {
 		drawMode = gl.LINES;
 	}
-	else if (event.key === "t" || event.key === "T") {
+	else if (event.key.toUpperCase() === "t") {
 		drawMode = gl.TRIANGLES;
 	}
-	else if (event.key === "p" || event.key === "P") {
+	else if (event.key.toUpperCase() === "p") {
 		drawMode = gl.POINTS;
+	}
+
+	else if (event.key.toUpperCase() === "ARROWUP") {
+		camera.position[1] += 0.1; //Y axis
+		mat4.targetTo(camera.matrix, camera.position, camera.target, camera.up);
+	}
+	else if (event.key.toUpperCase() === "ARROWDOWN") {
+		camera.position[1] -= 0.1; //Y axis
+		mat4.targetTo(camera.matrix, camera.position, camera.target, camera.up);
 	}
 
 	else if (event.key === " ") {
@@ -184,6 +196,8 @@ function initMaterials() {
 				projectionMatrix: gl.getUniformLocation(phongProgram, 'uProjectionMatrix'),
 				modelViewMatrix: gl.getUniformLocation(phongProgram, 'uModelViewMatrix'),
 				normalMatrix: gl.getUniformLocation(phongProgram, 'uNormalMatrix'),
+				worldMatrix: gl.getUniformLocation(phongProgram, 'uWorldMatrix'),
+				cameraPosition: gl.getUniformLocation(phongProgram, "uCameraPosition"),
 
 				useTexture: gl.getUniformLocation(phongProgram, "uUseTexture"),
 				uSampler: gl.getUniformLocation(phongProgram, 'uSampler'),
@@ -203,7 +217,7 @@ function initMaterials() {
 		}
 	};
 
-	let toonProgram = initShaderProgram("toon-vshader", "toon-fshader");
+	let toonProgram = initShaderProgram("toon2-vshader", "toon2-fshader");
 	materials.toon = {
 		name: "toon",
 		useTexture: true,
@@ -225,6 +239,9 @@ function initMaterials() {
 				projectionMatrix: gl.getUniformLocation(toonProgram, 'uProjectionMatrix'),
 				modelViewMatrix: gl.getUniformLocation(toonProgram, 'uModelViewMatrix'),
 				normalMatrix: gl.getUniformLocation(toonProgram, 'uNormalMatrix'),
+				worldMatrix: gl.getUniformLocation(phongProgram, 'uWorldMatrix'),
+				cameraMatrix: gl.getUniformLocation(phongProgram, 'uCameraMatrix'),
+				cameraPosition: gl.getUniformLocation(phongProgram, 'uCameraPosition'),
 
 				useTexture: gl.getUniformLocation(toonProgram, "uUseTexture"),
 				uSampler: gl.getUniformLocation(toonProgram, 'uSampler'),
@@ -408,7 +425,7 @@ function loadMeshes() {
 			      let eltBottle = {
 				      name: "bottle",
 				      mesh: bottle,
-				      translation: [0, 1, 0],
+				      translation: [5, 1, 0],
 				      rotation: [-Math.PI / 2., 0, 0],
 				      scale: [0.2, 0.2, 0.2],
 				      material: Object.assign({}, materials.phong)
@@ -426,7 +443,7 @@ function loadMeshes() {
 			      let eltBody = {
 				      name: "body",
 				      mesh: body,
-				      translation: [-10, 0, 10],
+				      translation: [-5, 0, 10],
 				      rotation: [-Math.PI / 2.0, 0, 0],
 				      scale: [0.5, 0.5, 0.5],
 				      material: Object.assign({}, materials.toon)
@@ -856,6 +873,9 @@ function drawMesh(projectionMatrix, globalSceneMatrix, elt) {
 	gl.uniformMatrix4fv(programParams.globals.projectionMatrix, false, projectionMatrix);
 	gl.uniformMatrix4fv(programParams.globals.modelViewMatrix, false, modelViewMatrix);
 	gl.uniformMatrix4fv(programParams.globals.normalMatrix, false, normalMatrix);
+	gl.uniformMatrix4fv(programParams.globals.worldMatrix, false, globalSceneMatrix);
+	gl.uniformMatrix4fv(programParams.globals.cameraMatrix, false, camera.matrix);
+	gl.uniform3fv(programParams.globals.cameraPosition, camera.position);
 	gl.uniform1i(programParams.globals.useTexture, elt.material.useTexture);
 
 	gl.uniform1i(programParams.globals.useLight, useLight);

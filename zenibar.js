@@ -20,7 +20,7 @@ let lightPos = [10.0, 10.0, 10.0];
 let lightColor = [1.0, 1.0, 1.0];
 let drawMode = 4;
 
-let globalSceneViewMatrix = mat4.create();
+let worldMatrix = mat4.create();
 
 function main() {
 	const canvas = document.getElementById("scene");
@@ -55,8 +55,8 @@ function initGL(canvas) {
  * @param canvas
  */
 function initEvents(canvas) {
-	mat4.identity(globalSceneViewMatrix);
-	mat4.translate(globalSceneViewMatrix, globalSceneViewMatrix, [0, 5, 25.0]);
+	mat4.identity(worldMatrix);
+	mat4.translate(worldMatrix, worldMatrix, [0, 5, 25.0]);
 	// Mouse interaction
 	canvas.addEventListener("mousedown", handleMouseDown, false);
 	canvas.addEventListener("mouseup", handleMouseUp, false);
@@ -96,9 +96,9 @@ function handleMouseMove(event) {
 	mat4.identity(newRotationMatrix);
 	mat4.rotate(newRotationMatrix, newRotationMatrix, degToRad(deltaX / 10), [0, 1, 0]);
 
-	var deltaY = newY - lastMouseY;
+	let deltaY = newY - lastMouseY;
 	mat4.rotate(newRotationMatrix, newRotationMatrix, degToRad(deltaY / 10), [1, 0, 0]);
-	mat4.multiply(globalSceneViewMatrix, newRotationMatrix, globalSceneViewMatrix);
+	mat4.multiply(worldMatrix, newRotationMatrix, worldMatrix);
 
 	lastMouseX = newX;
 	lastMouseY = newY;
@@ -108,7 +108,12 @@ function handleMouseMove(event) {
 
 function handleMouseWheel(event) {
 
-	mat4.translate(globalSceneViewMatrix, globalSceneViewMatrix, [event.deltaX / 30., 0, event.deltaY / 30.]);
+	camera.position[0] += event.deltaX / 30.;
+	camera.position[2] += event.deltaY / 30.;
+	camera.target[0] += event.deltaX / 30.;
+	camera.target[2] += event.deltaY / 30.;
+
+	mat4.targetTo(camera.matrix, camera.position, camera.target, camera.up);
 
 	event.preventDefault();
 
@@ -142,14 +147,14 @@ function degToRad(degrees) {
 
 function initCamera() {
 	camera = {
-		position: [0, 0, 2],
+		position: [0, 5, 20],
 		target: [0, 0, 0],
 		up: [0, 1, 0],
 
 		matrix : mat4.create()
 	};
 
-	mat4.lookAt(camera.matrix, camera.position, camera.target, camera.up);
+	mat4.targetTo(camera.matrix, camera.position, camera.target, camera.up);
 }
 
 /**
@@ -785,28 +790,26 @@ function initCubeBuffers() {
 	);
 }
 
-function drawMesh(projectionMatrix, elt) {
-
-	//todo : use a camera system
+function drawMesh(projectionMatrix, globalSceneMatrix, elt) {
 
 	let programParams = elt.material.programParams;
 
 	let modelViewMatrix = mat4.create();
 	// move object
 	{
-		let worldMatrix = mat4.create();
-		mat4.invert(worldMatrix, globalSceneViewMatrix);
-		mat4.multiply(modelViewMatrix, modelViewMatrix, worldMatrix);
+		mat4.invert(modelViewMatrix, camera.matrix);
 
+
+		mat4.multiply(modelViewMatrix, modelViewMatrix, globalSceneMatrix);
+
+		// automatic rotation animation
 		mat4.rotate(modelViewMatrix, modelViewMatrix, time, [0, 1, 0]);
 
 		mat4.translate(modelViewMatrix, modelViewMatrix, elt.translation);
 
-
 		mat4.rotate(modelViewMatrix, modelViewMatrix, elt.rotation[0], [1, 0, 0]); // X
 		mat4.rotate(modelViewMatrix, modelViewMatrix, elt.rotation[1], [0, 1, 0]); // Y
 		mat4.rotate(modelViewMatrix, modelViewMatrix, elt.rotation[2], [0, 0, 1]); // Z
-
 
 		mat4.scale(modelViewMatrix, modelViewMatrix, elt.scale);
 	}
@@ -902,6 +905,8 @@ function drawMesh(projectionMatrix, elt) {
 /**
  * Render the scene
  */
+const projectionMatrix = mat4.create();
+const globalSceneMatrix = mat4.create();
 function drawScene() {
 
 	// Clear the color buffer
@@ -912,7 +917,7 @@ function drawScene() {
 
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-	const projectionMatrix = mat4.create();
+
 	mat4.perspective(projectionMatrix,
 	                 45 * Math.PI / 180, // fieldOfView, in radians
 	                 gl.canvas.clientWidth / gl.canvas.clientHeight, // aspect
@@ -920,8 +925,11 @@ function drawScene() {
 	                 300 //zFar
 	);
 
+	mat4.invert(globalSceneMatrix, worldMatrix);
+
+
 	for (let elt of scene) {
-		drawMesh(projectionMatrix, elt);
+		drawMesh(projectionMatrix, globalSceneMatrix, elt);
 	}
 
 	time += isAnimated ? 0.01 : 0.0;

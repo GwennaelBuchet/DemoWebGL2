@@ -7,7 +7,9 @@ Resources :
  * https://webgl2fundamentals.org
  * https://www.khronos.org/registry/webgl/specs/latest/2.0/
  * https://github.com/frenchtoast747/webgl-obj-loader
-
+ * https://opengameart.org
+ * https://learnopengl.com/
+ 
 
 ## Demo 1 : Setup
 Basic HTML setup, without any  3D computation
@@ -36,3 +38,14 @@ Websites to download models :
  - https://free3d.com/3d-models/obj
  - ...
  
+## Demo 8 : all together
+Several objects and several materials, with user events
+
+## Demo 9 : Coding the game
+Now we get all the base to develop a game, let's do it.
+- CubeMapping
+- SRT animation
+- user interaction
+- procedural mesh
+- reflection/refraction
+- ...

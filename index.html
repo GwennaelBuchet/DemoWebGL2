@@ -99,6 +99,106 @@ void main()
 
 </script>
 
+<script id="toon-vshader" type="x-shader/x-vertex">#version 300 es
+
+in vec3 aVertexPosition;
+in vec3 aVertexNormal;
+in vec2 aTextureCoord;
+
+uniform mat4 uNormalMatrix, uModelViewMatrix, uProjectionMatrix;
+
+out vec3 normalInterp;
+out vec3 vertPos;
+out vec2 vTextureCoord;
+
+void main()
+{
+    vec4 vertPos4 = uModelViewMatrix * vec4(aVertexPosition, 1.0);
+    vertPos = vec3(vertPos4) / vertPos4.w;
+    normalInterp = vec3(uNormalMatrix * vec4(aVertexNormal, 0.0));
+
+    vTextureCoord = aTextureCoord;
+
+    gl_Position = uProjectionMatrix * vertPos4;
+}
+
+</script>
+
+<script id="toon-fshader" type="x-shader/x-fragment">#version 300 es
+precision mediump float;
+out vec4 outColor;
+
+uniform vec3 uLightPos;
+uniform float uShininess;
+uniform float uKa;
+uniform float uKd;
+uniform float uKs;
+uniform vec3 uAmbientColor;
+uniform vec3 uDiffuseColor;
+uniform vec3 uSpecularColor;
+
+uniform sampler2D uSampler;
+uniform bool uUseTexture;
+uniform bool uUseLight;
+
+in vec3 normalInterp;
+in vec3 vertPos;
+in vec2 vTextureCoord;
+
+void main()
+{
+    vec3 texelColor;
+    if (uUseTexture == true) {
+        texelColor = vec3(texture(uSampler, vTextureCoord));
+    }
+    else {
+        texelColor = uDiffuseColor;
+    }
+
+
+    if (uUseLight) {
+        vec3 N = normalize(normalInterp);
+        vec3 L = normalize(uLightPos - vertPos);
+
+        // Lambert's cosine law
+        float lambertian = max(dot(N, L), 0.0);
+        float specular = 0.0;
+        vec3 V = normalize(-vertPos); // Vector to viewer
+        if(lambertian > 0.0) {
+            vec3 R = reflect(-L, N);      // Reflected light vector
+            // Compute the specular term
+            float specAngle = max(dot(R, V), 0.0);
+            specular = pow(specAngle, uShininess);
+        }
+
+        vec4 color;
+        float fraction = 1.0;
+
+        if (lambertian > pow(0.95, fraction)) {
+            color = vec4(vec3(1.0), 1.0);
+        }
+        else if (lambertian > pow(0.5, fraction)) {
+            color = vec4(vec3(0.7), 1.0);
+        }
+        else if (lambertian > pow(0.05, fraction)) {
+            color = vec4(vec3(0.35), 1.0);
+        }
+        else {
+            color = vec4(vec3(0.1), 1.0);
+        }
+
+        outColor = color * vec4(uKa * uAmbientColor +
+                                uKd * lambertian * texelColor /*+
+                                uKs * specular * uSpecularColor*/, 1.0);
+
+    }
+    else {
+        outColor = vec4(texelColor, 1.0);
+    }
+}
+
+</script>
+
 <script id="basic-vshader" type="x-shader/x-vertex">#version 300 es
 
 in vec4 aVertexPosition;

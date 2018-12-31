@@ -4,6 +4,15 @@ let textures = {};
 let materials = {};
 let scene = [];
 
+let time = 0.0;
+let isAnimated = true;
+let useLight = true;
+let lightPos = [10.0, 10.0, 10.0];
+let lightColor = [1.0, 1.0, 1.0];
+let drawMode = 4;
+
+let globalSceneViewMatrix = mat4.create();
+
 function main() {
 	const canvas = document.getElementById("scene");
 	initGL(canvas);
@@ -36,6 +45,8 @@ function initGL(canvas) {
  * @param canvas
  */
 function initEvents(canvas) {
+	mat4.identity(globalSceneViewMatrix);
+	mat4.translate(globalSceneViewMatrix, globalSceneViewMatrix, [0, 0, 25.0]);
 	// Mouse interaction
 	canvas.addEventListener("mousedown", handleMouseDown, false);
 	canvas.addEventListener("mouseup", handleMouseUp, false);
@@ -50,9 +61,6 @@ function initEvents(canvas) {
 let mouseDown = false;
 let lastMouseX = null;
 let lastMouseY = null;
-
-let globalSceneViewMatrix = mat4.create();
-mat4.identity(globalSceneViewMatrix);
 
 function handleMouseDown(event) {
 	mouseDown = true;
@@ -128,7 +136,7 @@ function degToRad(degrees) {
 function initMaterials() {
 
 	let phongProgram = initShaderProgram("phong-vshader", "phong-fshader");
-	let phong = {
+	materials.phong = {
 		name: "phong",
 		useTexture: true,
 		texture: textures.biere2,
@@ -168,7 +176,47 @@ function initMaterials() {
 		}
 	};
 
-	materials.phong = phong;
+	let toonProgram = initShaderProgram("toon-vshader", "toon-fshader");
+	materials.toon = {
+		name: "toon",
+		useTexture: true,
+		texture: textures.biere,
+		program: toonProgram,
+		ka: 1.0,
+		kd: 1.0,
+		ks: 1.0,
+		shininess: 90,
+		ambientColor: [0.1, 0.1, 0.1],
+		diffuseColor: [0.267, 0.329, 0.415],
+		specularColor: [1., 1., 1.],
+		programParams: {
+			globals: {
+				vertexPosition: gl.getAttribLocation(toonProgram, 'aVertexPosition'),
+				textureCoord: gl.getAttribLocation(toonProgram, 'aTextureCoord'),
+				vertexNormal: gl.getAttribLocation(toonProgram, 'aVertexNormal'),
+
+				projectionMatrix: gl.getUniformLocation(toonProgram, 'uProjectionMatrix'),
+				modelViewMatrix: gl.getUniformLocation(toonProgram, 'uModelViewMatrix'),
+				normalMatrix: gl.getUniformLocation(toonProgram, 'uNormalMatrix'),
+
+				useTexture: gl.getUniformLocation(toonProgram, "uUseTexture"),
+				uSampler: gl.getUniformLocation(toonProgram, 'uSampler'),
+
+				useLight: gl.getUniformLocation(toonProgram, "uUseLight"),
+				lightPos: gl.getUniformLocation(toonProgram, "uLightPos"),
+				lightColor: gl.getUniformLocation(toonProgram, "uLightColor")
+			},
+
+			ka: gl.getUniformLocation(toonProgram, "uKa"),
+			kd: gl.getUniformLocation(toonProgram, "uKd"),
+			ks: gl.getUniformLocation(toonProgram, "uKs"),
+			shininess: gl.getUniformLocation(toonProgram, "uShininess"),
+			ambientColor: gl.getUniformLocation(toonProgram, "uAmbientColor"),
+			diffuseColor: gl.getUniformLocation(toonProgram, "uDiffuseColor"),
+			specularColor: gl.getUniformLocation(toonProgram, "uSpecularColor")
+		}
+	};
+
 }
 
 /**
@@ -232,6 +280,7 @@ function createProgram(vertexShader, fragmentShader) {
 function loadTextures() {
 	textures.biere = loadTexture("assets/biere-mousse-carre.jpg");
 	textures.biere2 = loadTexture("assets/biere2.jpg");
+	textures.champagne = loadTexture("assets/Bottle/champ_diffuse.jpg");
 }
 
 /**
@@ -280,18 +329,19 @@ function loadScene() {
 	let eltGrid = {
 		name: "grid",
 		mesh: meshes[0], // grid mesh
-		translation: [0, 0, -20],
+		translation: [0, 0, 0],
 		rotation: [.1, 0, 0],
 		scale: [1, 1, 1],
 		material: Object.assign({}, materials.phong)
 	};
 	eltGrid.material.useTexture = false;
+	eltGrid.material.diffuseColor = [0.588, 0.722, 0.482];
 	scene.push(eltGrid);
 
 	let eltCube1 = {
 		name: "cube1",
 		mesh: meshes[1], // cube mesh
-		translation: [-5, 1, -20],
+		translation: [-5, 1, 0],
 		rotation: [.1, 0.1, 0],
 		scale: [1, 1, 1],
 		material: Object.assign({}, materials.phong)
@@ -301,10 +351,10 @@ function loadScene() {
 	let eltCube2 = {
 		name: "cube2",
 		mesh: meshes[1], // re-use the same cube mesh
-		translation: [5, 1, -15],
+		translation: [5, 1, 5],
 		rotation: [.1, 1, 0],
 		scale: [1, 1, 1],
-		material: Object.assign({}, materials.phong),
+		material: Object.assign({}, materials.phong)
 	};
 	eltCube2.material.useTexture = true;
 	scene.push(eltCube2);
@@ -318,6 +368,12 @@ function loadMeshes() {
 
 	meshes.push(initCubeBuffers());
 
+	/*OBJ.downloadMeshes({
+		                   'bottle1': 'assets/Bottle/12178_bottle_v1_L2.obj', // located in the models folder on the server
+		                   'body': 'assets/Female/Femal_Base_Mesh.obj'
+	                   }, loadExternalMeshes);
+*/
+
 	loadObjFile("assets/Bottle/12178_bottle_v1_L2.obj")
 		.then(result => {
 			      let bottle = createBufferFromData(result);
@@ -325,17 +381,83 @@ function loadMeshes() {
 			      let eltBottle = {
 				      name: "bottle",
 				      mesh: bottle,
-				      translation: [0, 1, -20],
+				      translation: [0, 1, 0],
 				      rotation: [-Math.PI / 2., 0, 0],
-				      scale: [0.1, 0.1, 0.1],
-				      material: materials.phong
+				      scale: [0.2, 0.2, 0.2],
+				      material: Object.assign({}, materials.phong)
 			      };
+			      eltBottle.material.texture = textures.champagne;
 
-			      eltBottle.material.texture = textures.biere;
 			      scene.push(eltBottle);
 		      }, error => alert(error)
 		);
+
+	loadObjFile("assets/Bottle_Opener/15524_Bottle_Opener-Mermaid_v1.obj")
+		.then(result => {
+			      let body = createBufferFromData(result);
+			      meshes.push(body);
+			      let eltBody = {
+				      name: "body",
+				      mesh: body,
+				      translation: [-10, 0, 10],
+				      rotation: [-Math.PI / 2.0, 0, 0],
+				      scale: [0.5, 0.5, 0.5],
+				      material: Object.assign({}, materials.toon)
+			      };
+			      eltBody.material.ambientColor = [0.1, 0.1, 0.1];
+			      eltBody.material.diffuseColor = [0.267, 0.329, 0.415];
+			      eltBody.material.specularColor = [1., 1., 1.];
+			      eltBody.material.useTexture = false;
+			      scene.push(eltBody);
+		      }, error => alert(error)
+		);
 }
+
+/*function loadExternalMeshes(m) {
+
+	OBJ.initMeshBuffers(gl, m.bottle1);
+
+	let bottle1 = {
+		verticesBuffer: m.bottle1.vertexBuffer,
+		textureCoordsBuffer: m.bottle1.textureBuffer,
+		normalsBuffer: m.bottle1.normalBuffer,
+		indicesBuffer: m.bottle1.indexBuffer,
+		data: m.bottle1
+	};
+	meshes.push(bottle1);
+	let eltBottle = {
+		name: "bottle",
+		mesh: bottle1,
+		translation: [0, 1, -20],
+		rotation: [-Math.PI / 2., 0, 0],
+		scale: [0.2, 0.2, 0.2],
+		material: Object.assign({}, materials.toon)
+	};
+
+	scene.push(eltBottle);
+
+
+	OBJ.initMeshBuffers(gl, m.body);
+	let body = {
+		verticesBuffer: m.body.vertexBuffer,
+		textureCoordsBuffer: m.body.textureBuffer,
+		normalsBuffer: m.body.normalBuffer,
+		indicesBuffer: m.body.indexBuffer,
+		data: m.body
+	};
+	meshes.push(body);
+	let eltBody = {
+		name: "body",
+		mesh: body,
+		translation: [0, 1, -20],
+		rotation: [-Math.PI / 2., 0, 0],
+		scale: [4, 4, 4],
+		material: Object.assign({}, materials.toon)
+	};
+	eltBody.material.useTexture = false;
+
+	scene.push(eltBody);
+}*/
 
 
 function createBufferFromData(data) {
@@ -425,7 +547,7 @@ function initGridBuffers() {
 	for (let h = 0; h <= nbH; h++) {
 		for (let w = 0; w <= nbW; w++) {
 			positions[index + 0] = startX + w * width; // x
-			positions[index + 1] = startY + Math.sin(h / 5) / 4; // Math.random() / 6.0; // y
+			positions[index + 1] = startY + Math.sin(h / 2) / 4; // Math.random() / 6.0; // y
 			positions[index + 2] = startZ + h * width; // z
 
 			normals[index + 0] = 0.0; // x
@@ -621,14 +743,15 @@ function drawMesh(projectionMatrix, elt) {
 		mat4.invert(worldMatrix, globalSceneViewMatrix);
 		mat4.multiply(modelViewMatrix, modelViewMatrix, worldMatrix);
 
+		mat4.rotate(modelViewMatrix, modelViewMatrix, time, [0, 1, 0]);
+
 		mat4.translate(modelViewMatrix, modelViewMatrix, elt.translation);
+
 
 		mat4.rotate(modelViewMatrix, modelViewMatrix, elt.rotation[0], [1, 0, 0]); // X
 		mat4.rotate(modelViewMatrix, modelViewMatrix, elt.rotation[1], [0, 1, 0]); // Y
 		mat4.rotate(modelViewMatrix, modelViewMatrix, elt.rotation[2], [0, 0, 1]); // Z
 
-
-		mat4.rotate(modelViewMatrix, modelViewMatrix, time, [0, 1, 0]); // Y
 
 		mat4.scale(modelViewMatrix, modelViewMatrix, elt.scale);
 	}
@@ -645,7 +768,8 @@ function drawMesh(projectionMatrix, elt) {
 	}
 
 	//Set the texture coordinates
-	if (elt.material.texture !== null && elt.material.useTexture === true) {
+	//if (elt.material.texture !== null && elt.material.useTexture === true)
+	{
 		gl.bindBuffer(gl.ARRAY_BUFFER, elt.mesh.textureCoordsBuffer);
 		gl.vertexAttribPointer(programParams.globals.textureCoord, 2, gl.FLOAT, false, 0, 0);
 		gl.enableVertexAttribArray(programParams.globals.textureCoord);
@@ -718,13 +842,6 @@ function drawMesh(projectionMatrix, elt) {
 
 }
 
-let time = 0.0;
-let isAnimated = true;
-let useLight = true;
-let lightPos = [10.0, 10.0, 10.0];
-let lightColor = [1.0, 1.0, 1.0];
-let drawMode = 4;
-
 /**
  * Render the scene
  */
@@ -750,9 +867,7 @@ function drawScene() {
 		drawMesh(projectionMatrix, elt);
 	}
 
-	if (isAnimated) {
-		time += 0.01;
-	}
+	time += isAnimated ? 0.01 : 0.0;
 
 	requestAnimationFrame(drawScene);
 }

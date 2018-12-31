@@ -1,8 +1,17 @@
+/**
+ * idées d'animation :
+ * - jeux : tunnel infini avec obstacles et verre/bouteille à faire bouger pour éviter les obstacles (1 verre offert tous les 15 obstacles)
+ * - jeux : bouteilles qui tombent (système de particules), le joueur fait bouger un réceptacle (verre géant ?) pour les ramasser (1 verre offert toutes les 15 bouteilles)
+ *
+ *
+ */
+
 let gl;
 let meshes = [];
 let textures = {};
 let materials = {};
 let scene = [];
+let camera = {};
 
 let time = 0.0;
 let isAnimated = true;
@@ -17,6 +26,7 @@ function main() {
 	const canvas = document.getElementById("scene");
 	initGL(canvas);
 	initEvents(canvas);
+	initCamera();
 	loadTextures();
 	initMaterials();
 	loadScene();
@@ -130,6 +140,18 @@ function degToRad(degrees) {
 	return degrees * Math.PI / 180;
 }
 
+function initCamera() {
+	camera = {
+		position: [0, 0, 2],
+		target: [0, 0, 0],
+		up: [0, 1, 0],
+
+		matrix : mat4.create()
+	};
+
+	mat4.lookAt(camera.matrix, camera.position, camera.target, camera.up);
+}
+
 /**
  * Create a list of materials to be used by the meshes
  */
@@ -191,9 +213,9 @@ function initMaterials() {
 		specularColor: [1., 1., 1.],
 		programParams: {
 			globals: {
-				vertexPosition: gl.getAttribLocation(toonProgram, 'aVertexPosition'),
-				textureCoord: gl.getAttribLocation(toonProgram, 'aTextureCoord'),
-				vertexNormal: gl.getAttribLocation(toonProgram, 'aVertexNormal'),
+				//vertexPosition: gl.getAttribLocation(toonProgram, 'aVertexPosition'),
+				//textureCoord: gl.getAttribLocation(toonProgram, 'aTextureCoord'),
+				//vertexNormal: gl.getAttribLocation(toonProgram, 'aVertexNormal'),
 
 				projectionMatrix: gl.getUniformLocation(toonProgram, 'uProjectionMatrix'),
 				modelViewMatrix: gl.getUniformLocation(toonProgram, 'uModelViewMatrix'),
@@ -765,6 +787,8 @@ function initCubeBuffers() {
 
 function drawMesh(projectionMatrix, elt) {
 
+	//todo : use a camera system
+
 	let programParams = elt.material.programParams;
 
 	let modelViewMatrix = mat4.create();
@@ -794,16 +818,16 @@ function drawMesh(projectionMatrix, elt) {
 	// Set the vertexPosition attribute of the shader
 	{
 		gl.bindBuffer(gl.ARRAY_BUFFER, elt.mesh.verticesBuffer);
-		gl.vertexAttribPointer(programParams.globals.vertexPosition, 3, gl.FLOAT, false, 0, 0);
-		gl.enableVertexAttribArray(programParams.globals.vertexPosition);
+		gl.vertexAttribPointer(/*programParams.globals.vertexPosition*/0, 3, gl.FLOAT, false, 0, 0);
+		gl.enableVertexAttribArray(/*programParams.globals.vertexPosition*/0);
 	}
 
 	//Set the texture coordinates
 	//if (elt.material.texture !== null && elt.material.useTexture === true)
 	{
 		gl.bindBuffer(gl.ARRAY_BUFFER, elt.mesh.textureCoordsBuffer);
-		gl.vertexAttribPointer(programParams.globals.textureCoord, 2, gl.FLOAT, false, 0, 0);
-		gl.enableVertexAttribArray(programParams.globals.textureCoord);
+		gl.vertexAttribPointer(/*programParams.globals.textureCoord*/2, 2, gl.FLOAT, false, 0, 0);
+		gl.enableVertexAttribArray(/*programParams.globals.textureCoord*/2);
 		if (elt.material.texture !== null) {
 			// Tell WebGL we want to affect texture unit 0
 			gl.activeTexture(gl.TEXTURE0);
@@ -815,8 +839,8 @@ function drawMesh(projectionMatrix, elt) {
 	// Normals
 	{
 		gl.bindBuffer(gl.ARRAY_BUFFER, elt.mesh.normalsBuffer);
-		gl.vertexAttribPointer(programParams.globals.vertexNormal, 3, gl.FLOAT, false, 0, 0);
-		gl.enableVertexAttribArray(programParams.globals.vertexNormal);
+		gl.vertexAttribPointer(/*programParams.globals.vertexNormal*/1, 3, gl.FLOAT, false, 0, 0);
+		gl.enableVertexAttribArray(/*programParams.globals.vertexNormal*/1);
 	}
 
 	// Set indices to use to index the vertices

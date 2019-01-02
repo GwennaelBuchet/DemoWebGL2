@@ -128,13 +128,13 @@ function handleKeyDown(event) {
 		useLight = !useLight;
 	}
 
-	else if (event.key.toUpperCase() === "w") {
+	else if (event.key.toUpperCase() === "W") {
 		drawMode = gl.LINES;
 	}
-	else if (event.key.toUpperCase() === "t") {
+	else if (event.key.toUpperCase() === "T") {
 		drawMode = gl.TRIANGLES;
 	}
-	else if (event.key.toUpperCase() === "p") {
+	else if (event.key.toUpperCase() === "P") {
 		drawMode = gl.POINTS;
 	}
 
@@ -163,7 +163,7 @@ function initCamera() {
 		target: [0, 0, 0],
 		up: [0, 1, 0],
 
-		matrix : mat4.create()
+		matrix: mat4.create()
 	};
 
 	mat4.targetTo(camera.matrix, camera.position, camera.target, camera.up);
@@ -382,7 +382,7 @@ function loadScene() {
 	eltGrid.material.diffuseColor = [0.588, 0.722, 0.482];
 	scene.push(eltGrid);
 
-	let eltCube1 = {
+	/*let eltCube1 = {
 		name: "cube1",
 		mesh: meshes[1], // cube mesh
 		translation: [-5, 1, 0],
@@ -401,7 +401,7 @@ function loadScene() {
 		material: Object.assign({}, materials.phong)
 	};
 	eltCube2.material.useTexture = true;
-	scene.push(eltCube2);
+	scene.push(eltCube2);*/
 }
 
 /**
@@ -410,43 +410,40 @@ function loadScene() {
 function loadMeshes() {
 	meshes.push(initGridBuffers());
 
-	meshes.push(initCubeBuffers());
+	//meshes.push(initCubeBuffers());
 
-	/*OBJ.downloadMeshes({
-		                   'bottle1': 'assets/Bottle/12178_bottle_v1_L2.obj', // located in the models folder on the server
-		                   'body': 'assets/Female/Femal_Base_Mesh.obj'
-	                   }, loadExternalMeshes);
-*/
-
-	loadObjFile("assets/Bottle/12178_bottle_v1_L2.obj", "obj")
+	//loadObjFile("assets/Bottle/12178_bottle_v1_L2.obj", "obj")
+	loadObjFile("assets/beerglass.obj", "obj")
 		.then(result => {
 			      let bottle = createBufferFromData(result);
 			      meshes.push(bottle);
 			      let eltBottle = {
 				      name: "bottle",
 				      mesh: bottle,
-				      translation: [5, 1, 0],
-				      rotation: [-Math.PI / 2., 0, 0],
-				      scale: [0.2, 0.2, 0.2],
+				      translation: [-5, 1, 0],
+				      rotation: [0, 0, 0],
+				      scale: [0.01, 0.01, 0.01],
 				      material: Object.assign({}, materials.phong)
 			      };
-			      eltBottle.material.texture = textures.champagne;
+			      //eltBottle.material.texture = textures.champagne;
+			      eltBottle.material.useTexture = false;
+			      eltBottle.material.texture = null;
 
 			      scene.push(eltBottle);
 		      }, error => alert(error)
 		);
 
-	loadObjFile("assets/Bottle_Opener/15524_Bottle_Opener-Mermaid_v1.obj", "obj")
+	loadObjFile("assets/Mug.obj", "obj")
 		.then(result => {
 			      let body = createBufferFromData(result);
 			      meshes.push(body);
 			      let eltBody = {
 				      name: "body",
 				      mesh: body,
-				      translation: [-5, 0, 10],
-				      rotation: [-Math.PI / 2.0, 0, 0],
-				      scale: [0.5, 0.5, 0.5],
-				      material: Object.assign({}, materials.toon)
+				      translation: [5, 1, 0],
+				      rotation: [0, 0, 0],
+				      scale: [1, 1, 1],
+				      material: Object.assign({}, materials.phong)
 			      };
 			      eltBody.material.ambientColor = [0.1, 0.1, 0.1];
 			      eltBody.material.diffuseColor = [0.267, 0.329, 0.415];
@@ -927,6 +924,7 @@ function drawMesh(projectionMatrix, globalSceneMatrix, elt) {
  */
 const projectionMatrix = mat4.create();
 const globalSceneMatrix = mat4.create();
+
 function drawScene() {
 
 	// Clear the color buffer

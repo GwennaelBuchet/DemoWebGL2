@@ -212,10 +212,10 @@ function initMaterials() {
 		ka: 1.0,
 		kd: 1.0,
 		ks: 1.0,
-		shininess: 90,
+		shininess: 250,
 		ambientColor: [0.1, 0.1, 0.1],
 		diffuseColor: [0.267, 0.329, 0.415],
-		specularColor: [1., 1., 1.],
+		specularColor: [0.0, 0.0, 0.0],
 		programParams: {
 			globals: getGlobalsProgramParams(toonProgram),
 

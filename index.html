@@ -16,6 +16,51 @@
     <h3>It's time to come back to the present days...</h3>
 </div>
 
+<script id="reflect-vshader" type="x-shader/x-vertex">#version 300 es
+
+layout(location = 0) in vec3 aVertexPosition;
+layout(location = 1) in vec3 aVertexNormal;
+
+uniform mat4 uViewMatrix, uProjectionMatrix, uWorldMatrix;
+
+out vec3 vWorldPosition;
+out vec3 vWorldNormal;
+
+void main() {
+  // Multiply the position by the matrix.
+  gl_Position = uProjectionMatrix * uViewMatrix * uWorldMatrix * vec4(aVertexPosition, 1.0);
+
+  // send the view position to the fragment shader
+  vWorldPosition = (uWorldMatrix * vec4(aVertexPosition, 1.0)).xyz;
+
+  // orient the normals and pass to the fragment shader
+  vWorldNormal = mat3(uWorldMatrix) * aVertexNormal;
+}
+
+</script>
+
+<script id="reflect-fshader" type="x-shader/x-fragment">#version 300 es
+precision highp float;
+
+in vec3 vWorldPosition;
+in vec3 vWorldNormal;
+
+uniform samplerCube uSampler;
+// The position of the camera
+uniform vec3 uCameraPosition;
+
+out vec4 outColor;
+
+void main() {
+  vec3 worldNormal = normalize(vWorldNormal);
+  vec3 eyeToSurfaceDir = normalize(vWorldPosition - uCameraPosition);
+  vec3 direction = reflect(eyeToSurfaceDir, worldNormal);
+
+  outColor = texture(uSampler, direction);
+}
+
+</script>
+
 
 <script id="phong-vshader" type="x-shader/x-vertex">#version 300 es
 
@@ -23,7 +68,7 @@ layout(location = 0) in vec3 aVertexPosition;
 layout(location = 1) in vec3 aVertexNormal;
 layout(location = 2) in vec2 aTextureCoord;
 
-uniform mat4 uNormalMatrix, uModelViewMatrix, uProjectionMatrix, uWorldMatrix;
+uniform mat4 uNormalMatrix, uViewMatrix, uProjectionMatrix, uWorldMatrix;
 
 out vec3 normalInterp;
 out vec3 vertPos;
@@ -31,15 +76,15 @@ out vec2 vTextureCoord;
 
 void main()
 {
-    vec4 vertPos4 = uModelViewMatrix * vec4(aVertexPosition, 1.0);
+    // Multiply the position by the matrix.
+    gl_Position = uProjectionMatrix * uViewMatrix * uWorldMatrix * vec4(aVertexPosition, 1.0);
+
+    vec4 vertPos4 = uViewMatrix * vec4(aVertexPosition, 1.0);
     vertPos = vec3(vertPos4) / vertPos4.w;
     normalInterp = vec3(uNormalMatrix * vec4(aVertexNormal, 0.0));
 
     vTextureCoord = aTextureCoord;
-
-    gl_Position = uProjectionMatrix * vertPos4;
 }
-
 </script>
 
 <script id="phong-fshader" type="x-shader/x-fragment">#version 300 es
@@ -105,26 +150,22 @@ layout(location = 0) in vec3 aVertexPosition;
 layout(location = 1) in vec3 aVertexNormal;
 layout(location = 2) in vec2 aTextureCoord;
 
-uniform mat4 uNormalMatrix, uModelViewMatrix, uProjectionMatrix;
-uniform vec3 uCameraPosition;
+//uniform mat4 uNormalMatrix, uViewMatrix, uProjectionMatrix, uCameraMatrix;
+uniform mat4 uViewMatrix, uProjectionMatrix, uWorldMatrix;
 
-out vec3 normalInterp;
-out vec3 vertPos;
-out vec2 vTextureCoord;
-out vec4 eye;
+out vec3 vWorldPosition;
+out vec3 vWorldNormal;
 
 void main()
 {
-    vec4 vertPos4 = uModelViewMatrix * vec4(aVertexPosition, 1.0);
-    vertPos = vec3(vertPos4) / vertPos4.w;
-    normalInterp = vec3(uNormalMatrix * vec4(aVertexNormal, 0.0));
+  // Multiply the position by the matrix.
+  gl_Position = uProjectionMatrix * uViewMatrix * uWorldMatrix * vec4(aVertexPosition, 1.0);
 
-    mat4 eyeMatrix = inverse(uModelViewMatrix);
-    eye = normalize(eyeMatrix * vec4(aVertexPosition, 1.0));
+  // send the view position to the fragment shader
+  vWorldPosition = (uWorldMatrix * vec4(aVertexPosition, 1.0)).xyz;
 
-    vTextureCoord = aTextureCoord;
-
-    gl_Position = uProjectionMatrix * vertPos4;
+  // orient the normals and pass to the fragment shader
+  vWorldNormal = mat3(uWorldMatrix) * aVertexNormal;
 }
 
 </script>
@@ -134,95 +175,6 @@ precision mediump float;
 out vec4 outColor;
 
 uniform vec3 uLightPos;
-uniform float uShininess;
-uniform float uKa;
-uniform float uKd;
-uniform float uKs;
-uniform vec3 uAmbientColor;
-uniform vec3 uDiffuseColor;
-uniform vec3 uSpecularColor;
-
-uniform sampler2D uSampler;
-uniform bool uUseTexture;
-uniform bool uUseLight;
-
-in vec3 normalInterp;
-in vec3 vertPos;
-in vec2 vTextureCoord;
-in vec4 eye;
-
-void main()
-{
-    vec3 texelColor;
-    if (uUseTexture == true) {
-        texelColor = vec3(texture(uSampler, vTextureCoord));
-    }
-    else {
-        texelColor = uDiffuseColor;
-    }
-
-
-    if (uUseLight) {
-        vec3 N = normalize(normalInterp);
-        vec3 L = normalize(uLightPos - vertPos);
-
-        // Lambert's cosine law
-        float lambertian = max(dot(N, L), 0.0);
-        vec4 color;
-        float fraction = 1.0;
-
-        if (lambertian > pow(0.95, fraction)) {
-            color = vec4(vec3(1.0), 1.0);
-        }
-        else if (lambertian > pow(0.5, fraction)) {
-            color = vec4(vec3(0.7), 1.0);
-        }
-        /*else if (lambertian > pow(0.05, fraction)) {
-            color = vec4(vec3(0.35), 1.0);
-        }*/
-        else {
-            color = vec4(vec3(0.5), 1.0);
-        }
-
-        float edgeDetection = (dot(vec3(eye), N) > 0.15) ? 1.0 : 0.0;
-
-        outColor = edgeDetection * color * vec4(uKa * uAmbientColor + uKd * lambertian * texelColor, 1.0);
-
-    }
-    else {
-        outColor = vec4(texelColor, 1.0);
-    }
-}
-
-</script>
-
-<script id="toon2-vshader" type="x-shader/x-vertex">#version 300 es
-
-layout(location = 0) in vec3 aVertexPosition;
-layout(location = 1) in vec3 aVertexNormal;
-layout(location = 2) in vec2 aTextureCoord;
-
-uniform mat4 uNormalMatrix, uModelViewMatrix, uProjectionMatrix, uCameraMatrix;
-
-//send them to fragment shader
-out vec3 world_pos;
-out vec3 world_normal;
-
-void main()
-{
-    //convert in world coords
-    world_pos = mat3(uModelViewMatrix) * aVertexPosition;//careful here
-    world_normal = normalize(mat3(uModelViewMatrix) * aVertexNormal);
-    gl_Position = uProjectionMatrix * uModelViewMatrix * vec4(aVertexPosition, 1);
-}
-
-</script>
-
-<script id="toon2-fshader" type="x-shader/x-fragment">#version 300 es
-precision mediump float;
-out vec4 out_color;
-
-uniform vec3 uLightPos;
 uniform vec3 uCameraPosition;
 uniform float uShininess;
 uniform float uKd;
@@ -230,8 +182,8 @@ uniform float uKs;
 uniform vec3 uAmbientColor;
 uniform vec3 uDiffuseColor;
 
-in vec3 world_pos;
-in vec3 world_normal;
+in vec3 vWorldPosition;
+in vec3 vWorldNormal;
 
 //number of levels
 //for diffuse color
@@ -240,29 +192,29 @@ const float scaleFactor = 1.0 / levels;
 
 void main()
 {
-    vec3 L = normalize(uLightPos - world_pos);
-    vec3 V = normalize(uCameraPosition - world_pos);
+    vec3 L = normalize(uLightPos - vWorldPosition);
+    vec3 V = normalize(uCameraPosition - vWorldPosition);
 
-    float diffuse = max(0.0, dot(L, world_normal));
+    float diffuse = max(0.0, dot(L, vWorldNormal));
     vec3 diffuseColor = uDiffuseColor * uKd * floor(diffuse * levels) * scaleFactor;
 
     vec3 H = normalize(L + V);
 
     float specular = 0.0;
-    if (dot(L, world_normal) > 0.0)
+    if (dot(L, vWorldNormal) > 0.0)
     {
-       specular = uKs * pow( max(0.0, dot( H, world_normal)), uShininess);
+       specular = uKs * pow( max(0.0, dot( H, vWorldNormal)), uShininess);
     }
 
     //limit specular
-    float specMask = (pow(dot(H, world_normal), uShininess) > 0.4) ? 1.0 : 0.0;
+    float specMask = (pow(dot(H, vWorldNormal), uShininess) > 0.4) ? 1.0 : 0.0;
 
-    float edgeDetection = (dot(V, world_normal) > 0.3) ? 1.0 : 0.0;
+    float edgeDetection = (dot(V, vWorldNormal) > 0.3) ? 1.0 : 0.0;
 
     vec3 color = edgeDetection * (uAmbientColor + diffuseColor + specular * specMask);
     //vec3 color = vec3(1.0, 1.0, 1.0);
 
-    out_color = vec4(color, 1.0);
+    outColor = vec4(color, 1.0);
 }
 
 </script>
@@ -274,7 +226,7 @@ in vec3 aVertexNormal;
 in vec2 aTextureCoord;
 
 uniform mat4 uNormalMatrix;
-uniform mat4 uModelViewMatrix;
+uniform mat4 uViewMatrix;
 uniform mat4 uProjectionMatrix;
 
 uniform bool uUseLight;
@@ -286,7 +238,7 @@ out vec2 vTextureCoord;
 out vec3 vLighting;
 
 void main(void) {
-  gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
+  gl_Position = uProjectionMatrix * uViewMatrix * aVertexPosition;
   vTextureCoord = aTextureCoord;
 
     if (!uUseLight) {
@@ -299,13 +251,6 @@ void main(void) {
         vLighting = uAmbientColor + (uLightColor * directional);
   }
 }
-
-
-
-
-
-
-
 
 </script>
 
